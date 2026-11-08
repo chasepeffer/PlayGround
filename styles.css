@@ -360,8 +360,8 @@ body.touch.playing .touch-ui { display: block; }
 }
 .tbtn-attack span { font-family: var(--font-ui); font-size: 8px; }
 .tbtn-small { width: 56px; height: 56px; }
-.touch-actions { grid-template-columns: 56px 56px; align-items: end; }
-.touch-actions .tbtn-attack { grid-column: 2; grid-row: 2; justify-self: end; }
+.touch-actions { grid-template-columns: repeat(3, 56px); align-items: end; }
+.touch-actions .tbtn-attack { grid-column: 3; grid-row: 2; justify-self: end; }
 
 /* ---------- start / death ---------- */
 .start, .death {

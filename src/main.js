@@ -434,6 +434,7 @@ function bindTouchButton(id, action) {
 }
 bindTouchButton('btn-spawn', spawnNPC);
 bindTouchButton('btn-grab', interact);
+bindTouchButton('btn-drop', dropWeapon);
 bindTouchButton('btn-throw', throwHeld);
 bindTouchButton('btn-attack', attack);
 
@@ -445,6 +446,7 @@ function update(dt) {
   swingT = Math.max(0, swingT - dt);
 
   player.group.rotation.y = yaw;
+  player.facingYaw = yaw;
   player.forward.set(-Math.sin(yaw), 0, -Math.cos(yaw));
   camera.rotation.x = pitch;
 
