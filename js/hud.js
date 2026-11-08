@@ -22,6 +22,7 @@ export class HUD {
     this.waveNum = $('waveNum');
     this.modeLabel = $('modeLabel');
     this.enemyCount = $('enemyCount');
+    this.enemyLabel = $('enemyLabel');
     this.killNum = $('killNum');
     this.statusTxt = $('statusTxt');
     this.slowmoDot = $('slowmoDot');
@@ -52,7 +53,14 @@ export class HUD {
   }
 
   setMode(mode) {
-    this.modeLabel.textContent = mode === 'sandbox' ? 'FREE PLAY' : 'SURVIVAL';
+    const labels = {
+      survive: 'SURVIVAL',
+      campaign: 'CAMPAIGN',
+      zombies: 'ZOMBIES',
+      sandbox: 'FREE PLAY',
+    };
+    this.modeLabel.textContent = labels[mode] || 'SURVIVAL';
+    this.enemyLabel.textContent = mode === 'zombies' ? 'ZOMBIES' : 'HOSTILES';
   }
 
   banner(text, sub = '', cls = '') {
@@ -132,7 +140,11 @@ export class HUD {
       this.reloadArc.style.strokeDashoffset = String(94.2 * (1 - pct));
     }
 
-    this.waveNum.textContent = g.mode === 'sandbox' ? '∞' : String(g.wave).padStart(2, '0');
+    this.waveNum.textContent = g.mode === 'sandbox'
+      ? '∞'
+      : g.mode === 'campaign'
+        ? `${String(g.wave).padStart(2, '0')}/${String(5).padStart(2, '0')}`
+        : String(g.wave).padStart(2, '0');
     this.enemyCount.textContent = g.aliveEnemyCount();
     this.killNum.textContent = g.kills;
 

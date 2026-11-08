@@ -273,6 +273,8 @@ kbd {
 .modal-note { font-family: var(--font-mono); font-size: 8px; letter-spacing: .16em; color: rgba(231,222,209,.28); margin-top: 20px; }
 .death-modal { border-top-color: var(--blood-bright); }
 .death-modal h2 { color: var(--blood-bright); text-shadow: 0 0 60px rgba(229,43,49,.35); }
+.victory-modal { border-top-color: #b6c66a; }
+.victory-modal h2 { color: #b6c66a; text-shadow: 0 0 60px rgba(182,198,106,.25); }
 .death-stats { display: flex; gap: 32px; margin-top: 22px; font-family: var(--font-mono); }
 .death-stats div { display: flex; flex-direction: column; gap: 3px; }
 .death-stats span { font-size: 8px; letter-spacing: .22em; color: rgba(231,222,209,.3); }

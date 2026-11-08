@@ -9,6 +9,13 @@ import { Ragdoll } from './ragdoll.js';
 import { Arsenal, WEAPONS } from './weapons.js';
 
 const clampX = x => clamp(x, 70, WORLD_W - 70);
+const CAMPAIGN_WAVES = [
+  ['thug', 'thug', 'thug', 'thug'],
+  ['thug', 'gunner', 'thug', 'gunner', 'thug', 'thug'],
+  ['thug', 'gunner', 'brute', 'thug', 'gunner', 'brute', 'gunner'],
+  ['gunner', 'thug', 'brute', 'gunner', 'thug', 'brute', 'gunner', 'thug', 'gunner'],
+  ['brute', 'gunner', 'thug', 'brute', 'gunner', 'thug', 'gunner', 'brute', 'gunner', 'thug', 'brute'],
+];
 
 export class Game {
   constructor() {
@@ -87,6 +94,7 @@ export class Game {
     this.barrels = this.makeBarrels();
     this.wave = 1; this.kills = 0; this.limbs = 0;
     this.waveClock = 0; this.betweenWaves = false; this.waveCooldown = 0;
+    this.campaignComplete = false;
     this.bloodRain = 0; this.slowmo = false; this.timeScale = 1; this.hitstop = 0;
     this.deathTimer = 0; this.slowTimer = 0; this.damageTimer = 0;
     this.arsenal.reset();
@@ -158,10 +166,12 @@ export class Game {
     document.getElementById('menu').classList.add('hidden');
     document.getElementById('pause').classList.add('hidden');
     document.getElementById('death').classList.add('hidden');
+    document.getElementById('victory').classList.add('hidden');
     this.closePanel();
     this.hud.show(true);
     this.hud.setMode(mode);
     this.state = 'playing';
+    this.campaignComplete = false;
     this.paused = false;
     const p = new Actor({
       x: 820, type: 'player', gore: this.gore, audio: this.audio,
@@ -193,6 +203,7 @@ export class Game {
     this.closePanel();
     document.getElementById('pause').classList.add('hidden');
     document.getElementById('death').classList.add('hidden');
+    document.getElementById('victory').classList.add('hidden');
     document.getElementById('menu').classList.remove('hidden');
     this.hud.show(false);
     this.buildMenuScene();
@@ -228,6 +239,8 @@ export class Game {
   bindUI() {
     const $ = id => document.getElementById(id);
     $('startBtn').addEventListener('click', () => this.startGame('survive'));
+    $('campaignBtn').addEventListener('click', () => this.startGame('campaign'));
+    $('zombiesBtn').addEventListener('click', () => this.startGame('zombies'));
     $('sandboxBtn').addEventListener('click', () => this.startGame('sandbox'));
     $('resumeBtn').addEventListener('click', () => this.resume());
     $('restartBtn').addEventListener('click', () => this.startGame(this.mode));
@@ -235,6 +248,8 @@ export class Game {
     $('retryBtn').addEventListener('click', () => this.startGame(this.mode));
     $('deathSandboxBtn').addEventListener('click', () => this.startGame('sandbox'));
     $('deathMenuBtn').addEventListener('click', () => this.toMenu());
+    $('victoryRetryBtn').addEventListener('click', () => this.startGame('campaign'));
+    $('victoryMenuBtn').addEventListener('click', () => this.toMenu());
     $('panelClose').addEventListener('click', () => this.closePanel());
     document.querySelectorAll('#sandboxPanel [data-action]').forEach(btn => {
       btn.addEventListener('click', () => this.sandboxAction(btn.dataset.action));
@@ -588,7 +603,7 @@ export class Game {
       }
     }
 
-    if (this.mode === 'survive') this.updateWaves(dt);
+    if (this.state === 'playing' && ['survive', 'campaign', 'zombies'].includes(this.mode)) this.updateWaves(dt);
     this.fx.update(raw, p ? clamp(p.hp / p.maxHp, 0, 1) : 1);
 
     if (this.deathTimer > 0) {
@@ -986,10 +1001,12 @@ export class Game {
   spawnEnemy(type = 'thug', x = null) {
     const p = this.player;
     const cfg = {
-      thug: { hp: 92, weapon: WEAPONS[4], speed: 155, w: 'MACHETE' },
-      gunner: { hp: 88, weapon: this.wave > 4 && chance(0.5) ? WEAPONS[2] : WEAPONS[0], speed: 118, w: 'CARBINE' },
-      brute: { hp: 235, weapon: WEAPONS[5], speed: 88, w: 'SLEDGE' },
+      thug: { hp: 92, weapon: WEAPONS[4], speed: 155 },
+      gunner: { hp: 88, weapon: this.wave > 4 && chance(0.5) ? WEAPONS[2] : WEAPONS[0], speed: 118 },
+      brute: { hp: 235, weapon: WEAPONS[5], speed: 88 },
+      zombie: { hp: 105, weapon: null, speed: 108 },
     }[type] || { hp: 90, weapon: WEAPONS[4], speed: 150 };
+    const scalesWithWave = this.mode === 'survive' || this.mode === 'zombies';
     let sx = x;
     if (sx === null) {
       const left = p ? p.x - (this.viewW * 0.62 + rand(140, 20)) : rand(200, 100);
@@ -1000,9 +1017,13 @@ export class Game {
     }
     const a = new Actor({
       x: clampX(sx), type: 'enemy', enemyType: type, gore: this.gore, audio: this.audio,
-      worldW: WORLD_W, groundY: GROUND, hp: cfg.hp + (this.mode === 'survive' ? this.wave * 6 : 0),
+      worldW: WORLD_W, groundY: GROUND, hp: cfg.hp + (scalesWithWave ? this.wave * (type === 'zombie' ? 3 : 6) : 0),
       weapon: cfg.weapon, aim: p ? Math.atan2((p.y - 118) - (GROUND - 130), p.x - sx) : 0,
-      shirt: type === 'brute' ? '#3b3128' : undefined,
+      shirt: type === 'brute' ? '#3b3128' : type === 'zombie' ? '#4d5737' : undefined,
+      pants: type === 'zombie' ? '#30362c' : undefined,
+      skin: type === 'zombie' ? '#8d9874' : undefined,
+      helmet: type === 'zombie' ? false : undefined,
+      mask: type === 'zombie' ? false : undefined,
     });
     a.onDeath = (act, info) => this.onActorDeath(act, info);
     a.speed = cfg.speed;
@@ -1032,6 +1053,7 @@ export class Game {
     let desired, speed;
     if (a.enemyType === 'gunner') { desired = 340; speed = a.speed; }
     else if (a.enemyType === 'brute') { desired = 72; speed = a.speed; }
+    else if (a.enemyType === 'zombie') { desired = 42; speed = a.speed; }
     else { desired = 58; speed = a.speed; }
     let moveDir = 0;
     if (adx > desired + 45) moveDir = dx > 0 ? 1 : -1;
@@ -1052,11 +1074,14 @@ export class Game {
 
     // melee animation
     if (a.meleeProgress >= 0) {
-      a.meleeProgress += dt / (a.enemyType === 'brute' ? 0.46 : 0.3);
+      const swingDuration = a.enemyType === 'brute' ? 0.46 : a.enemyType === 'zombie' ? 0.42 : 0.3;
+      a.meleeProgress += dt / swingDuration;
       if (a.meleeProgress > 0.52 && !a.swingHit) {
         a.swingHit = true;
-        if (adx < (a.enemyType === 'brute' ? 105 : 86) && Math.abs(p.y - a.y) < 90) {
-          this.hurtPlayer(a.enemyType === 'brute' ? 26 : 13, p.x, p.y - 110, a.aim);
+        const hitReach = a.enemyType === 'brute' ? 105 : a.enemyType === 'zombie' ? 82 : 86;
+        if (adx < hitReach && Math.abs(p.y - a.y) < 90) {
+          const damage = a.enemyType === 'brute' ? 26 : a.enemyType === 'zombie' ? 18 : 13;
+          this.hurtPlayer(damage, p.x, p.y - 110, a.aim);
           this.audio.flesh(true);
         } else {
           this.gore.dust(a.x + Math.cos(a.aim) * 60, a.y - 100, 2, 4);
@@ -1175,17 +1200,30 @@ export class Game {
     this.spawnQueue.length = 0;
     this.betweenWaves = false;
     this.waveCooldown = 0;
-    const count = Math.min(16, 3 + Math.floor(n * 1.85));
+
+    let composition;
+    if (this.mode === 'campaign') {
+      composition = CAMPAIGN_WAVES[n - 1] || [];
+    } else if (this.mode === 'zombies') {
+      const count = Math.min(24, 5 + Math.floor(n * 1.6));
+      composition = Array(count).fill('zombie');
+    } else {
+      const count = Math.min(16, 3 + Math.floor(n * 1.85));
+      composition = Array.from({ length: count }, () => {
+        const r = Math.random();
+        if (n >= 3 && r < 0.18) return 'brute';
+        return r < 0.55 ? 'gunner' : 'thug';
+      });
+    }
+
     let at = 0.2;
-    for (let i = 0; i < count; i++) {
-      at += rand(1.15, 0.35);
-      let type = 'thug';
-      const r = Math.random();
-      if (n >= 3 && r < 0.18) type = 'brute';
-      else if (r < 0.55) type = 'gunner';
+    for (const type of composition) {
+      at += rand(this.mode === 'zombies' ? 0.9 : 1.15, 0.35);
       this.spawnQueue.push({ at, type, side: chance(0.5) ? 'left' : 'right' });
     }
-    this.hud.banner(`WAVE ${String(n).padStart(2, '0')}`, `${count} HOSTILES INBOUND`, 'danger');
+    const title = this.mode === 'zombies' ? `NIGHT ${String(n).padStart(2, '0')}` : `WAVE ${String(n).padStart(2, '0')}`;
+    const target = this.mode === 'zombies' ? 'ZOMBIES' : 'HOSTILES';
+    this.hud.banner(title, `${composition.length} ${target} INBOUND`, 'danger');
     this.audio.waveStart();
     this.audio.setMuted(this.audio.muted);
   }
@@ -1208,16 +1246,36 @@ export class Game {
     if (alive === 0 && this.spawnQueue.length === 0) {
       if (!this.betweenWaves) {
         this.betweenWaves = true;
-        this.waveCooldown = 5;
-        this.hud.banner('AREA CLEAR', 'REGROUP · ' + (this.wave + 1) + ' INBOUND');
+        const finalCampaignWave = this.mode === 'campaign' && this.wave >= CAMPAIGN_WAVES.length;
+        this.waveCooldown = finalCampaignWave ? 3 : 5;
+        this.hud.banner(
+          finalCampaignWave ? 'FINAL AREA CLEAR' : 'AREA CLEAR',
+          finalCampaignWave ? 'EXTRACTION IN PROGRESS' : 'REGROUP · ' + (this.wave + 1) + ' INBOUND',
+        );
         this.audio.waveStart();
         this.arsenal.addAmmo(1);
         this.saveBest();
       } else {
         this.waveCooldown -= dt;
-        if (this.waveCooldown <= 0) this.startWave(this.wave + 1);
+        if (this.waveCooldown <= 0) {
+          if (this.mode === 'campaign' && this.wave >= CAMPAIGN_WAVES.length) this.completeCampaign();
+          else this.startWave(this.wave + 1);
+        }
       }
     }
+  }
+
+  completeCampaign() {
+    if (this.campaignComplete) return;
+    this.campaignComplete = true;
+    this.state = 'complete';
+    this.paused = true;
+    this.saveBest();
+    document.getElementById('victoryKills').textContent = String(this.kills);
+    document.getElementById('victoryLimbs').textContent = String(this.limbs);
+    document.getElementById('victory').classList.remove('hidden');
+    this.hud.show(false);
+    this.audio.waveStart();
   }
 
   aliveEnemyCount() {
