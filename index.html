@@ -23,7 +23,7 @@
       <div id="waveHud">
         <div class="wave-label" id="modeLabel">SURVIVAL</div>
         <div class="wave-value"><span id="waveNum">01</span><i>WAVE</i></div>
-        <div class="wave-sub"><span id="enemyCount">0</span> HOSTILES &nbsp;·&nbsp; <span id="killNum">0</span> KILLS</div>
+        <div class="wave-sub"><span id="enemyCount">0</span> <span id="enemyLabel">HOSTILES</span> &nbsp;·&nbsp; <span id="killNum">0</span> KILLS</div>
       </div>
       <div id="killFeed"></div>
     </div>
@@ -87,8 +87,10 @@
       <div class="tagline">GORE SANDBOX <span>/</span> VOL. I</div>
       <p class="blurb">Ragdolls. Dismemberment. Ballistics. <br/>No gods, no clean-up crew.</p>
       <div class="menu-actions">
-        <button id="startBtn" class="btn primary" aria-label="Start">PLAY</button>
-        <button id="sandboxBtn" class="btn ghost">SANDBOX MODE</button>
+        <button id="startBtn" class="btn primary" aria-label="Start survival">SURVIVAL</button>
+        <button id="campaignBtn" class="btn ghost">CAMPAIGN</button>
+        <button id="zombiesBtn" class="btn ghost">ZOMBIES</button>
+        <button id="sandboxBtn" class="btn ghost">SANDBOX</button>
       </div>
       <div class="menu-meta">
         <div><span>BEST WAVE</span><b id="bestWave">—</b></div>
@@ -137,6 +139,22 @@
         <button id="retryBtn" class="btn primary">RETRY</button>
         <button id="deathSandboxBtn" class="btn ghost">SANDBOX</button>
         <button id="deathMenuBtn" class="btn ghost">MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="victory" class="screen hidden">
+    <div class="modal victory-modal">
+      <div class="eyebrow">OPERATION COMPLETE · ALL HOSTILES NEUTRALIZED</div>
+      <h2>YOU SURVIVED</h2>
+      <div class="death-stats">
+        <div><span>WAVES</span><b>05 / 05</b></div>
+        <div><span>KILLS</span><b id="victoryKills">0</b></div>
+        <div><span>LIMBS</span><b id="victoryLimbs">0</b></div>
+      </div>
+      <div class="modal-actions">
+        <button id="victoryRetryBtn" class="btn primary">PLAY AGAIN</button>
+        <button id="victoryMenuBtn" class="btn ghost">MAIN MENU</button>
       </div>
     </div>
   </div>
