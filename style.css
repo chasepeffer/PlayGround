@@ -5,6 +5,9 @@
 #mobile-controls button{position:absolute;display:grid;place-items:center;pointer-events:auto;border:1px solid #ffffff66;background:#17201ce8;border-radius:50%;width:58px;height:58px;font:600 9px 'DM Mono',monospace;letter-spacing:.04em;touch-action:none;user-select:none;box-shadow:0 4px 18px #0006}#mobile-controls #touch-action{right:25px;bottom:54px;color:var(--acid)}#mobile-controls #touch-run{right:96px;bottom:16px}#mobile-controls #touch-flash{right:27px;bottom:128px;color:var(--acid)}#mobile-controls #touch-attack{right:24px;bottom:49px;width:72px;height:72px;border-color:#e27568;background:#642d2be8;color:#ffe1dc;font-size:9px;box-shadow:0 0 24px #a33b2d66}#mobile-controls #touch-sense{right:105px;bottom:127px;color:var(--acid)}.touch-stick{touch-action:none;user-select:none}
 @media(max-width:700px){.hunter-attack{padding:8px;font-size:8px;margin-top:8px}.hunter-attack kbd{font-size:7px}.status-panel{max-height:48vh;overflow:auto}}
 
+/* Stun pulse feedback and touch action. */
+.stun-control{display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:8px;padding:8px 10px;border:1px solid #87cbd077;border-radius:4px;background:linear-gradient(110deg,#1d4b4aaa,#172622aa);color:#bce9e0;font:600 9px 'DM Mono',monospace;letter-spacing:.08em;cursor:pointer}.stun-control span{font-size:14px}.stun-control b{color:#d4ea72}.stun-control kbd{font-size:8px;color:#a6c5bd}.hunter-stun{margin-top:7px}
+#mobile-controls #touch-stun{right:105px;bottom:200px;border-color:#87cbd0;background:#1d4b4aeb;color:#c2f0e9}
 /* Keep the in-game overlay readable without crowding the play space. */
 #hud{transform:scale(.88);transform-origin:center center}
 @media(max-width:700px){#hud{transform:scale(.92)}#mobile-controls button{width:52px;height:52px}#mobile-controls #touch-attack{width:64px;height:64px}}
