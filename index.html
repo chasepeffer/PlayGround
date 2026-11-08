@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#101513" />
+  <title>BLACKWOOD — Nightfall</title>
+  <link rel="icon" href="data:," />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.169.0/build/three.module.js"}}</script>
+  <script type="module" src="game.js"></script>
+</head>
+<body>
+  <main id="game-shell">
+    <canvas id="scene"></canvas>
+    <div id="grain"></div>
+    <div id="vignette"></div>
+    <section id="title-screen" class="screen">
+      <div class="title-top"><span class="brand-mark">B</span> BLACKWOOD <span class="brand-divider">/</span> NIGHTFALL</div>
+      <div class="title-content">
+        <p class="eyebrow"><i></i> ASYMMETRICAL HORROR · 1–5 PLAYERS</p>
+        <h1>THE WOODS<br><em>ARE LISTENING.</em></h1>
+        <p class="intro">A storm has swallowed the road. Someone—or something—is still out there.</p>
+        <div class="mode-card">
+          <div class="mode-head"><span>YOUR ROLE</span><span class="live-dot">● &nbsp;LOCAL MATCH</span></div>
+          <div class="role-options">
+            <button class="role-option selected" data-role="random"><span class="role-icon">◈</span><b>UNASSIGNED</b><small>Let fate decide</small><span class="radio"></span></button>
+            <button class="role-option" data-role="hunter"><span class="role-icon hunter-icon">♟</span><b>THE HUNTER</b><small>Track them down</small><span class="radio"></span></button>
+            <button class="role-option" data-role="survivor"><span class="role-icon survivor-icon">⌁</span><b>SURVIVOR</b><small>Find a way out</small><span class="radio"></span></button>
+          </div>
+          <div class="mode-footer"><span>◉ &nbsp;CABIN IN THE PINES</span><span>01 / 02</span></div>
+        </div>
+        <button id="start-button" class="primary-button">ENTER THE WOODS <span>↗</span></button>
+        <div class="title-controls"><span><kbd>WASD</kbd> MOVE</span><span><kbd>MOUSE</kbd> LOOK</span><span><kbd>F</kbd> FLASHLIGHT</span></div>
+      </div>
+      <div class="title-bottom"><span>BLACKWOOD COUNTY, OREGON</span><span>NO SIGNAL · 02:17 AM</span></div>
+    </section>
+    <section id="hud" class="hidden">
+      <header class="hud-top"><div class="hud-brand"><span class="brand-mark small">B</span> BLACKWOOD <span>/</span> NIGHTFALL</div><div class="match-status"><i></i><span id="match-label">THE HUNT IS ON</span><b id="match-timer">04:00</b></div><button id="menu-button" aria-label="Menu">Ⅱ</button></header>
+      <div class="objective"><span class="objective-icon">⌖</span><div><small id="objective-kicker">OBJECTIVE</small><b id="objective-text">Find the survivors.</b></div></div>
+      <div id="human-hud" class="status-panel"><div class="status-title"><span>CONDITION</span><span id="health-value">100%</span></div><div class="meter"><i id="health-meter"></i></div><div class="status-title stamina-title"><span>STAMINA</span><span id="stamina-value">100%</span></div><div class="meter stamina-meter"><i id="stamina-meter"></i></div><button id="flashlight-control"><span>◉</span> FLASHLIGHT <b id="flash-state">ON</b><kbd>F</kbd></button></div>
+      <div id="hunter-hud" class="status-panel hidden"><div class="hunter-heading"><span>☠</span><div><small>YOU ARE</small><b>THE HUNTER</b></div><em>LV. 01</em></div><div class="power-row"><span>HUNT SENSE</span><kbd>Q</kbd></div><div class="power-note">Reveal nearby footsteps</div><div class="hunger-meter"><i></i></div></div>
+      <div class="roster"><div class="roster-label">IN THE WOODS <span id="roster-count">04</span></div><div id="roster-list"></div></div>
+      <div class="compass"><span>N</span><i></i><span id="compass-degrees">N</span></div>
+      <div id="interact-hint" class="interact-hint hidden"><kbd>E</kbd><span>INTERACT</span></div>
+      <div class="bottom-left"><span class="location-pin">⌖</span><span id="location-name">THE OLD CABIN</span><i></i><span>BLACKWOOD FOREST</span></div>
+      <div class="bottom-right"><span id="tool-tip">SHIFT &nbsp; SPRINT</span><span>•</span><span>ESC &nbsp; PAUSE</span></div>
+      <div id="toast" class="toast"></div>
+    </section>
+    <section id="result-screen" class="screen hidden"><div class="result-card"><p class="eyebrow" id="result-eyebrow">NIGHTFALL</p><h2 id="result-title">THE HUNT ENDS.</h2><p id="result-copy"></p><button id="again-button" class="primary-button">PLAY AGAIN <span>↗</span></button><button id="title-button" class="text-button">RETURN TO TITLE</button></div></section>
+    <div id="crosshair" class="hidden"><i></i><b></b></div>
+    <div id="damage-flash"></div>
+    <div id="mobile-controls" class="hidden"><div class="touch-stick" id="touch-stick"><i></i></div><button id="touch-action">E</button><button id="touch-run">RUN</button><button id="touch-flash">◉</button></div>
+  </main>
+</body>
+</html>
