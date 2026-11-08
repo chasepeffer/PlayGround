@@ -42,7 +42,7 @@
       <header class="hud-top"><div class="hud-brand"><span class="brand-mark small">B</span> BLACKWOOD <span>/</span> NIGHTFALL</div><div class="match-status"><i></i><span id="match-label">THE HUNT IS ON</span><b id="match-timer">04:00</b></div><button id="menu-button" aria-label="Menu">Ⅱ</button></header>
       <div class="objective"><span class="objective-icon">⌖</span><div><small id="objective-kicker">OBJECTIVE</small><b id="objective-text">Find the survivors.</b></div></div>
       <div id="human-hud" class="status-panel"><div class="status-title"><span>CONDITION</span><span id="health-value">100%</span></div><div class="meter"><i id="health-meter"></i></div><div class="status-title stamina-title"><span>STAMINA</span><span id="stamina-value">100%</span></div><div class="meter stamina-meter"><i id="stamina-meter"></i></div><button id="flashlight-control"><span>◉</span> FLASHLIGHT <b id="flash-state">ON</b><kbd>F</kbd></button></div>
-      <div id="hunter-hud" class="status-panel hidden"><div class="hunter-heading"><span>☠</span><div><small>YOU ARE</small><b>THE HUNTER</b></div><em>LV. 01</em></div><div class="power-row"><span>HUNT SENSE</span><kbd>Q</kbd></div><div class="power-note">Reveal nearby footsteps</div><div class="hunger-meter"><i></i></div></div>
+      <div id="hunter-hud" class="status-panel hidden"><div class="hunter-heading"><span>☠</span><div><small>YOU ARE</small><b>THE HUNTER</b></div><em>LV. 01</em></div><div class="power-row"><span>HUNT SENSE</span><kbd>Q</kbd></div><div class="power-note">Reveal nearby footsteps</div><div class="hunger-meter"><i></i></div><button id="hunter-attack" class="hunter-attack"><span>✦</span> ATTACK <kbd>CLICK / E</kbd></button></div>
       <div class="roster"><div class="roster-label">IN THE WOODS <span id="roster-count">04</span></div><div id="roster-list"></div></div>
       <div class="compass"><span>N</span><i></i><span id="compass-degrees">N</span></div>
       <div id="interact-hint" class="interact-hint hidden"><kbd>E</kbd><span>INTERACT</span></div>
@@ -53,7 +53,7 @@
     <section id="result-screen" class="screen hidden"><div class="result-card"><p class="eyebrow" id="result-eyebrow">NIGHTFALL</p><h2 id="result-title">THE HUNT ENDS.</h2><p id="result-copy"></p><button id="again-button" class="primary-button">PLAY AGAIN <span>↗</span></button><button id="title-button" class="text-button">RETURN TO TITLE</button></div></section>
     <div id="crosshair" class="hidden"><i></i><b></b></div>
     <div id="damage-flash"></div>
-    <div id="mobile-controls" class="hidden"><div class="touch-stick" id="touch-stick"><i></i></div><button id="touch-action">E</button><button id="touch-run">RUN</button><button id="touch-flash">◉</button></div>
+    <div id="mobile-controls" class="hidden"><div class="touch-stick" id="touch-stick"><i></i></div><button id="touch-action">USE</button><button id="touch-attack" class="hidden">ATTACK</button><button id="touch-sense" class="hidden">SENSE</button><button id="touch-run">RUN</button><button id="touch-flash">◉</button></div>
   </main>
 </body>
 </html>
