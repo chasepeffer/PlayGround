@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#10162f" />
+  <title>Crash Bandicoot 5 — Wumpa Rush</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="game-shell">
+    <div id="game" aria-label="3D Wumpa Rush game"></div>
+    <div class="vignette"></div>
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Wumpa Rush home"><span class="brand-mark">W</span><span>WUMPA<span class="brand-light"> RUSH</span><small>ISLAND RUN • CHAPTER 05</small></span></a>
+      <div class="top-actions"><div class="level-pill"><i></i> N. SANITY ISLAND</div><button id="soundBtn" class="icon-btn" aria-label="Toggle sound">♫</button><button id="pauseBtn" class="icon-btn" aria-label="Pause game">Ⅱ</button></div>
+    </header>
+    <section class="hud" aria-live="polite">
+      <div class="hud-card fruit-card"><div class="hud-icon fruit-icon">✦</div><div><span class="hud-label">WUMPA FRUIT</span><strong id="fruitCount">00</strong></div></div>
+      <div class="progress-card"><div class="progress-top"><span>ISLAND RUN</span><span id="distanceLabel">0<span>m</span> <b>/ 135m</b></span></div><div class="progress-track"><div id="progressFill"></div><span class="progress-marker"></span></div><div class="checkpoint-labels"><span>START</span><span>PORTAL</span></div></div>
+      <div class="hud-card life-card"><div class="hud-icon heart-icon">♥</div><div><span class="hud-label">LIVES</span><strong id="lifeCount">03</strong></div></div>
+    </section>
+    <div id="toast" class="toast" aria-live="polite"></div>
+    <section id="overlay" class="overlay">
+      <div class="intro-panel">
+        <div class="eyebrow"><span class="eyebrow-star">✦</span> A BRAND NEW ADVENTURE <span class="eyebrow-star">✦</span></div>
+        <h1>WUMPA<br><em>RUSH</em></h1>
+        <p class="intro-copy">The island is going bananas. Dash through the jungle, scoop up fruit, and make it to the portal in one piece!</p>
+        <div class="howto"><div><kbd>←</kbd><kbd>→</kbd><span>Switch lanes</span></div><div><kbd>SPACE</kbd><span>Jump gaps</span></div><div><kbd>⇧</kbd><span>Spin / smash crates</span></div></div>
+        <button id="playBtn" class="play-btn"><span>START YOUR RUN</span><b>→</b></button>
+        <div class="best-line">BEST RUN <strong id="bestScore">—</strong> <span>•</span> COLLECT WUMPA, AVOID TROUBLE</div>
+      </div>
+      <div id="resultPanel" class="result-panel hidden">
+        <div id="resultIcon" class="result-icon">✦</div><div id="resultEyebrow" class="eyebrow">RUN COMPLETE</div><h2 id="resultTitle">NICE RUN!</h2><p id="resultCopy">The island is yours.</p><div class="result-stats"><div><b id="resultFruit">0</b><span>FRUIT</span></div><div><b id="resultDistance">135m</b><span>DISTANCE</span></div></div><button id="retryBtn" class="play-btn"><span>RUN IT BACK</span><b>↻</b></button>
+      </div>
+      <div class="overlay-note">A fan-made 3D platform runner <span>•</span> Made for the love of the run</div>
+    </section>
+    <div class="mobile-controls"><button id="leftBtn" aria-label="Move left">‹</button><button id="jumpBtn" aria-label="Jump">↑</button><button id="spinBtn" aria-label="Spin">✦</button><button id="rightBtn" aria-label="Move right">›</button></div>
+    <div class="corner-note"><span class="pulse-dot"></span> <span id="statusText">READY WHEN YOU ARE</span></div>
+  </main>
+  <script type="module" src="./game.js"></script>
+</body>
+</html>
