@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0a0809" />
+<title>CARNAGE — Gore Sandbox</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23080607'/%3E%3Cpath d='M16 3C13 10 7 15 7 21a9 9 0 0 0 18 0c0-6-6-11-9-18Z' fill='%23b3141c'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+  <canvas id="fx"></canvas>
+
+  <div id="vignette"></div>
+  <div id="grain"></div>
+  <div id="damageFlash"></div>
+
+  <div id="hud" class="hidden">
+    <div id="topbar">
+      <div class="brand">BLOODWORKS<span>// R&amp;D DIVISION</span></div>
+      <div id="waveHud">
+        <div class="wave-label" id="modeLabel">SURVIVAL</div>
+        <div class="wave-value"><span id="waveNum">01</span><i>WAVE</i></div>
+        <div class="wave-sub"><span id="enemyCount">0</span> HOSTILES &nbsp;·&nbsp; <span id="killNum">0</span> KILLS</div>
+      </div>
+      <div id="killFeed"></div>
+    </div>
+
+    <div id="crosshair">
+      <span class="ch t"></span><span class="ch b"></span><span class="ch l"></span><span class="ch r"></span>
+      <span class="dot"></span>
+    </div>
+    <div id="hitmarker"><span></span><span></span><span></span><span></span></div>
+    <div id="reloadRing"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15"></circle><circle id="reloadArc" cx="18" cy="18" r="15"></circle></svg><b>RELOAD</b></div>
+
+    <div id="bottomLeft">
+      <div class="health-head"><span>VITALS</span><b id="hpNum">100</b></div>
+      <div id="healthBar"><div id="healthFill"></div><div id="healthGhost"></div></div>
+      <div id="statusLine"><span id="statusTxt">STABLE</span><span id="slowmoDot" class="hidden">TIME DILATION</span></div>
+    </div>
+
+    <div id="bottomRight">
+      <div id="weaponName">M1911</div>
+      <div id="ammoRow"><span id="ammoMag">12</span><i>/</i><span id="ammoReserve">∞</span></div>
+      <div id="weaponType">SEMI-AUTO · .45 ACP</div>
+    </div>
+
+    <div id="weaponBar"></div>
+    <div id="hintBar">
+      <span><kbd>A</kbd><kbd>D</kbd> MOVE</span>
+      <span><kbd>W</kbd> JUMP</span>
+      <span><kbd>SHIFT</kbd> SPRINT</span>
+      <span><kbd>LMB</kbd> ATTACK</span>
+      <span><kbd>R</kbd> RELOAD</span>
+      <span><kbd>Q</kbd> SWAP</span>
+      <span><kbd>TAB</kbd> SANDBOX</span>
+      <span><kbd>T</kbd> SLOW-MO</span>
+      <span><kbd>ESC</kbd> PAUSE</span>
+    </div>
+  </div>
+
+  <div id="sandboxPanel" class="hidden">
+    <div class="panel-head">
+      <h3>SANDBOX <em>CONTROL</em></h3>
+      <button id="panelClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="panel-grid">
+      <button data-action="dummy"><b>J</b>SPAWN DUMMY</button>
+      <button data-action="hostile"><b>K</b>SPAWN HOSTILE</button>
+      <button data-action="heal"><b>H</b>FULL HEAL</button>
+      <button data-action="ammo"><b>U</b>REFILL AMMO</button>
+      <button data-action="clear"><b>C</b>CLEAR CORPSES</button>
+      <button data-action="slowmo"><b>T</b>SLOW-MO</button>
+      <button data-action="gore"><b>G</b>GORE BOMB</button>
+      <button data-action="rain"><b>B</b>BLOOD RAIN</button>
+    </div>
+    <p class="panel-note">Keys 1–8 arm yourself. Everything here is live.</p>
+  </div>
+
+  <div id="menu" class="screen">
+    <div class="menu-grad"></div>
+    <div class="menu-content">
+      <div class="eyebrow">BLOODWORKS PRESENTS &nbsp;·&nbsp; A PHYSICS-FUELED GORE PLAYGROUND</div>
+      <h1 class="logo">CARNAGE</h1>
+      <div class="tagline">GORE SANDBOX <span>/</span> VOL. I</div>
+      <p class="blurb">Ragdolls. Dismemberment. Ballistics. <br/>No gods, no clean-up crew.</p>
+      <div class="menu-actions">
+        <button id="startBtn" class="btn primary" aria-label="Start">PLAY</button>
+        <button id="sandboxBtn" class="btn ghost">SANDBOX MODE</button>
+      </div>
+      <div class="menu-meta">
+        <div><span>BEST WAVE</span><b id="bestWave">—</b></div>
+        <div><span>BEST KILLS</span><b id="bestKills">—</b></div>
+        <div><span>ENGINE</span><b>VERLET-X</b></div>
+      </div>
+      <div class="controls-grid">
+        <div><kbd>A</kbd><kbd>D</kbd><span>Move</span></div>
+        <div><kbd>W</kbd><span>Jump</span></div>
+        <div><kbd>SPACE</kbd><span>Roll</span></div>
+        <div><kbd>LMB</kbd><span>Shoot / Swing</span></div>
+        <div><kbd>RMB</kbd><span>Aim down sights</span></div>
+        <div><kbd>R</kbd><span>Reload</span></div>
+        <div><kbd>Q</kbd><span>Swap weapon</span></div>
+        <div><kbd>G</kbd><span>Grenade</span></div>
+        <div><kbd>T</kbd><span>Slow motion</span></div>
+      </div>
+      <div class="menu-foot">SIMULATED VIOLENCE · NOT FOR THE SQUEAMISH · HEADPHONES RECOMMENDED</div>
+    </div>
+    <div class="blood-drip d1"></div><div class="blood-drip d2"></div><div class="blood-drip d3"></div>
+  </div>
+
+  <div id="pause" class="screen hidden">
+    <div class="modal">
+      <div class="eyebrow">SYSTEM HALT</div>
+      <h2>PAUSED</h2>
+      <div class="modal-actions">
+        <button id="resumeBtn" class="btn primary">RESUME</button>
+        <button id="restartBtn" class="btn ghost">RESTART</button>
+        <button id="menuBtn" class="btn ghost">MAIN MENU</button>
+      </div>
+      <p class="modal-note">TAB opens sandbox controls while paused.</p>
+    </div>
+  </div>
+
+  <div id="death" class="screen hidden">
+    <div class="modal death-modal">
+      <div class="eyebrow">SUBJECT EXPIRED</div>
+      <h2>YOU DIED</h2>
+      <div class="death-stats">
+        <div><span>WAVE</span><b id="deathWave">1</b></div>
+        <div><span>KILLS</span><b id="deathKills">0</b></div>
+        <div><span>LIMBS</span><b id="deathLimbs">0</b></div>
+      </div>
+      <div class="modal-actions">
+        <button id="retryBtn" class="btn primary">RETRY</button>
+        <button id="deathSandboxBtn" class="btn ghost">SANDBOX</button>
+        <button id="deathMenuBtn" class="btn ghost">MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="touchUI" class="hidden">
+    <div id="stick"><div id="stickKnob"></div></div>
+    <div id="touchButtons">
+      <button id="tFire">FIRE</button>
+      <button id="tReload">R</button>
+      <button id="tJump">↑</button>
+      <button id="tSwap">SWAP</button>
+    </div>
+  </div>
+
+  <div id="rotateHint" class="hidden">↻ ROTATE FOR A WIDER KILLING FLOOR</div>
+</div>
+
+<script type="module" src="js/game.js"></script>
+</body>
+</html>
