@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0a0a0d" />
+<title>GORE PIT — 4×4</title>
+<link rel="icon" href="data:," />
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<div id="app">
+  <canvas id="game" aria-label="Gore Pit 3D arena"></canvas>
+  <div class="grade"></div>
+  <div class="vignette"></div>
+  <div id="hurt-flash"></div>
+
+  <div id="hud" class="hud">
+    <header class="brand">
+      <div class="brand-mark">GORE<span>PIT</span></div>
+      <div class="brand-sub">4 × 4 &nbsp;·&nbsp; TWO WALLS &nbsp;·&nbsp; NO EXIT</div>
+    </header>
+
+    <section class="vitals">
+      <div class="vitals-head">
+        <span class="tag">VITALS</span>
+        <span id="hp-number">100</span>
+      </div>
+      <div class="hp-track"><div id="hp-fill" class="hp-fill"></div><div class="hp-ticks"></div></div>
+      <div class="vitals-foot">
+        <span id="state-label">READY</span>
+        <span id="threat-label">THREAT 0</span>
+      </div>
+    </section>
+
+    <section class="score">
+      <div class="score-row"><span class="tag">KILLS</span><b id="kill-count">0</b></div>
+      <div class="score-row"><span class="tag">GORE</span><b id="npc-count">0</b></div>
+      <div id="feed" class="feed"></div>
+    </section>
+
+    <section id="weapon-card" class="weapon-card">
+      <div id="weapon-icon" class="weapon-icon"></div>
+      <div class="weapon-meta">
+        <div id="weapon-name" class="weapon-name">FISTS</div>
+        <div class="weapon-stats">
+          <span id="weapon-dmg">10 DMG</span>
+          <span id="weapon-spd">FAST</span>
+        </div>
+        <div class="weapon-bar"><i id="weapon-bar-fill"></i></div>
+      </div>
+    </section>
+
+    <div id="crosshair" class="crosshair">
+      <i class="ch-t"></i><i class="ch-b"></i><i class="ch-l"></i><i class="ch-r"></i><i class="ch-dot"></i>
+      <div id="hitmarker" class="hitmarker"></div>
+    </div>
+
+    <div id="prompt" class="prompt"><kbd>E</kbd><span id="prompt-text">GRAB</span></div>
+
+    <div id="controls-hint" class="controls-hint">
+      <span><kbd>WASD</kbd> MOVE</span><span><kbd>MOUSE</kbd> LOOK</span><span><kbd>LMB</kbd> ATTACK</span><span><kbd>E</kbd> GRAB</span><span><kbd>F</kbd> THROW</span><span><kbd>Q</kbd> DROP</span><span><kbd>R</kbd> SPAWN GORE</span>
+    </div>
+
+    <div id="touch-ui" class="touch-ui">
+      <div id="stick" class="stick"><div id="stick-knob" class="stick-knob"></div></div>
+      <div class="touch-actions">
+        <button id="btn-spawn" class="tbtn tbtn-small" type="button"><span>R</span>SPAWN</button>
+        <button id="btn-grab" class="tbtn tbtn-small" type="button"><span>E</span>GRAB</button>
+        <button id="btn-throw" class="tbtn tbtn-small" type="button"><span>F</span>THROW</button>
+        <button id="btn-attack" class="tbtn tbtn-attack" type="button"><span>ATK</span>HIT</button>
+      </div>
+    </div>
+
+    <button id="mute" class="mute" type="button" aria-label="Toggle sound">SOUND ON</button>
+  </div>
+
+  <div id="start" class="start">
+    <div class="start-inner">
+      <div class="start-kicker">A 4 × 4 CLOSE-QUARTERS EXPERIMENT</div>
+      <h1 class="start-title">GORE<span>PIT</span></h1>
+      <p class="start-copy">Two bare walls. One tiny slab. A spawner full of very grabbable, very breakable <b>Gore NPCs</b>. Pick up the pickaxe. Pick up the hatchet. Pick up a whole person.</p>
+      <div class="start-specs">
+        <div><b>4×4</b><span>ARENA</span></div>
+        <div><b>02</b><span>WALLS</span></div>
+        <div><b>02</b><span>WEAPONS</span></div>
+        <div><b>∞</b><span>GORE</span></div>
+      </div>
+      <button id="start-btn" class="start-btn" type="button">Start Game</button>
+      <div class="start-controls">
+        <span><kbd>WASD</kbd> move</span>
+        <span><kbd>LMB</kbd> punch / swing</span>
+        <span><kbd>E</kbd> grab weapon or NPC</span>
+        <span><kbd>F</kbd> throw</span>
+        <span><kbd>R</kbd> spawn gore</span>
+      </div>
+      <div class="start-note">HEADPHONES RECOMMENDED · CLICK TO LOCK THE MOUSE · TOUCH CONTROLS SUPPORTED</div>
+    </div>
+  </div>
+
+  <div id="death" class="death hidden">
+    <div class="death-inner">
+      <div class="death-kicker">THE PIT KEEPS WHAT IT TAKES</div>
+      <h2>YOU DIED</h2>
+      <p id="death-stats">KILLS 0 · GORE 0</p>
+      <button id="respawn-btn" class="start-btn" type="button">Respawn</button>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
