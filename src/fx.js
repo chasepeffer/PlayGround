@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { QUALITY, lit } from './quality.js';
 
 const _v = new THREE.Vector3();
 const _q = new THREE.Quaternion();
@@ -17,20 +18,22 @@ export class FX {
 
     this.dropGeo = new THREE.IcosahedronGeometry(0.035, 0);
     this.chunkGeo = new THREE.BoxGeometry(1, 1, 1);
-    this.decalGeo = new THREE.CircleGeometry(1, 14);
-    this.ringGeo = new THREE.RingGeometry(0.72, 1, 40);
+    this.decalGeo = new THREE.CircleGeometry(1, 6);
+    this.ringGeo = new THREE.RingGeometry(0.72, 1, 12);
 
-    this.matBlood = new THREE.MeshStandardMaterial({ color: 0x7c1014, roughness: 0.42, metalness: 0.05 });
-    this.matBloodDark = new THREE.MeshStandardMaterial({ color: 0x4d090c, roughness: 0.55 });
-    this.matBone = new THREE.MeshStandardMaterial({ color: 0xd9cfb8, roughness: 0.7 });
-    this.matFlesh = new THREE.MeshStandardMaterial({ color: 0x9c5347, roughness: 0.62 });
+    this.matBlood = lit(0x7c1014);
+    this.matBloodDark = lit(0x4d090c);
+    this.matBone = lit(0xd9cfb8);
+    this.matFlesh = lit(0x9c5347);
     this.matDecal = new THREE.MeshBasicMaterial({ color: 0x3f0709, transparent: true, opacity: 0.78, depthWrite: false });
 
-    this.maxDecals = 64;
+    this.maxParticles = 72;
+    this.maxChunks = 18;
+    this.maxDecals = QUALITY.maxDecals;
     this.decalIndex = 0;
 
-    this.dust = this.makeDust();
-    scene.add(this.dust);
+    this.dust = QUALITY.dust ? this.makeDust() : null;
+    if (this.dust) scene.add(this.dust);
   }
 
   makeDust() {
@@ -56,15 +59,17 @@ export class FX {
 
   spawnDrop(pos, dir, opts = {}) {
     const { count = 12, power = 1, color = 'blood', up = 0.6, spread = 1.3, size = 1 } = opts;
-    for (let i = 0; i < count; i++) {
+    const reducedCount = Math.max(1, Math.round(count * QUALITY.fxScale));
+    for (let i = 0; i < reducedCount; i++) {
       let p = this.particles.find(x => !x.active);
-      if (!p) {
+      if (!p && this.particles.length < this.maxParticles) {
         const mesh = new THREE.Mesh(this.dropGeo, this.matBlood);
         mesh.castShadow = false;
         this.scene.add(mesh);
         p = { mesh, active: false, vel: new THREE.Vector3(), spin: new THREE.Vector3(), life: 0, max: 1, gravity: 16 };
         this.particles.push(p);
       }
+      if (!p) continue;
       p.active = true;
       p.mesh.visible = true;
       p.mesh.material = color === 'bone' ? this.matBone : color === 'flesh' ? this.matFlesh : (Math.random() < 0.35 ? this.matBloodDark : this.matBlood);
@@ -94,15 +99,17 @@ export class FX {
   }
 
   chunks(pos, count = 8) {
-    for (let i = 0; i < count; i++) {
+    const reducedCount = Math.max(1, Math.round(count * QUALITY.fxScale));
+    for (let i = 0; i < reducedCount; i++) {
       let c = this.chunkPool.find(x => !x.active);
-      if (!c) {
+      if (!c && this.chunkPool.length < this.maxChunks) {
         const mesh = new THREE.Mesh(this.chunkGeo, this.matFlesh);
-        mesh.castShadow = true;
+        mesh.castShadow = false;
         this.scene.add(mesh);
         c = { mesh, active: false, vel: new THREE.Vector3(), spin: new THREE.Vector3(), life: 0, max: 1 };
         this.chunkPool.push(c);
       }
+      if (!c) continue;
       c.active = true;
       c.mesh.visible = true;
       c.mesh.material = Math.random() < 0.3 ? this.matBone : Math.random() < 0.5 ? this.matBloodDark : this.matFlesh;
@@ -146,8 +153,9 @@ export class FX {
 
   ring(pos, color = 0xff3326, size = 0.55, dur = 0.5) {
     let r = this.rings.find(x => !x.active);
+    if (!r && this.rings.length >= 4) return;
     if (!r) {
-      const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+      const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false });
       const mesh = new THREE.Mesh(this.ringGeo, mat);
       mesh.rotation.x = -Math.PI / 2;
       mesh.renderOrder = 2;
@@ -169,9 +177,10 @@ export class FX {
 
   slash(pos, yaw, color = 0xcfe6ff) {
     let s = this.slashes.find(x => !x.active);
+    if (!s && this.slashes.length >= 3) return;
     if (!s) {
-      const geo = new THREE.TorusGeometry(0.62, 0.022, 4, 28, Math.PI * 1.15);
-      const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending });
+      const geo = new THREE.TorusGeometry(0.62, 0.022, 3, 10, Math.PI * 1.15);
+      const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.7, depthWrite: false });
       const mesh = new THREE.Mesh(geo, mat);
       this.scene.add(mesh);
       s = { mesh, active: false, life: 0, max: 0.2 };
@@ -253,7 +262,8 @@ export class FX {
       s.mesh.scale.setScalar(0.85 + t * 0.35);
     }
 
-    // dust
+    // Dust is omitted entirely in the phone profile.
+    if (!this.dust) return;
     const pos = this.dust.geometry.attributes.position;
     const seeds = this.dust.userData.seeds;
     for (let i = 0; i < pos.count; i++) {

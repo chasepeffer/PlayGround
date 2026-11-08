@@ -3,53 +3,52 @@ import { FX } from './fx.js';
 import { Sound } from './audio.js';
 import { GoreNPC } from './npc.js';
 import { WeaponDrop, WEAPON_DEFS, WEAPON_ICONS, buildWeaponMesh } from './weapons.js';
+import { LOW, QUALITY, lit } from './quality.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111116);
-scene.fog = new THREE.Fog(0x111116, 10, 24);
-const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 80);
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.7));
+scene.fog = new THREE.Fog(0x111116, 8, 18);
+const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 40);
+// Low-end profile: no MSAA, low-power GPU hint, cheap precision, small buffer.
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: QUALITY.antialias,
+  powerPreference: LOW ? 'low-power' : 'high-performance',
+  precision: LOW ? QUALITY.precision : 'highp',
+  stencil: false
+});
+const renderPixelRatio = () => Math.max(QUALITY.minPixelRatio, Math.min(devicePixelRatio || 1, 1) * QUALITY.pixelRatio);
+renderer.setPixelRatio(renderPixelRatio());
 renderer.setSize(innerWidth, innerHeight);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.enabled = QUALITY.shadows;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.12;
+if (!QUALITY.toneMapping) renderer.toneMapping = THREE.NoToneMapping;
 
-scene.add(new THREE.HemisphereLight(0xb9c2cf, 0x251919, 1.35));
-const keyLight = new THREE.DirectionalLight(0xffdfc1, 3.2);
+// Two lights only (no shadow maps, no dynamic point light).
+scene.add(new THREE.HemisphereLight(0xc4ccd6, 0x2a1a1a, 2.1));
+const keyLight = new THREE.DirectionalLight(0xffdfc1, 2.1);
 keyLight.position.set(-3.5, 7, 4.5);
-keyLight.castShadow = true;
-keyLight.shadow.mapSize.set(1024, 1024);
-keyLight.shadow.camera.left = -6;
-keyLight.shadow.camera.right = 6;
-keyLight.shadow.camera.top = 6;
-keyLight.shadow.camera.bottom = -6;
-keyLight.shadow.bias = -0.0004;
+keyLight.castShadow = QUALITY.shadows;
 scene.add(keyLight);
-const redLight = new THREE.PointLight(0xc32925, 16, 8, 2);
-redLight.position.set(0, 3.4, -1.6);
-scene.add(redLight);
 
-const concrete = new THREE.MeshStandardMaterial({ color: 0x555155, roughness: 0.94, metalness: 0.03 });
-const wallMat = new THREE.MeshStandardMaterial({ color: 0x39383d, roughness: 0.9 });
+const concrete = lit(0x555155);
+const wallMat = lit(0x39383d);
 const floor = new THREE.Mesh(new THREE.BoxGeometry(4, 0.16, 4), concrete);
 floor.position.y = -0.08;
-floor.receiveShadow = true;
+floor.receiveShadow = false;
 scene.add(floor);
 // Exactly two plain, untextured boundary walls; the other edges are open.
 const wallBack = new THREE.Mesh(new THREE.BoxGeometry(4, 2.8, 0.16), wallMat);
 wallBack.position.set(0, 1.32, -2.08);
-wallBack.receiveShadow = true;
-wallBack.castShadow = true;
+wallBack.receiveShadow = false;
+wallBack.castShadow = false;
 scene.add(wallBack);
 const wallLeft = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.8, 4), wallMat);
 wallLeft.position.set(-2.08, 1.32, 0);
-wallLeft.receiveShadow = true;
-wallLeft.castShadow = true;
+wallLeft.receiveShadow = false;
+wallLeft.castShadow = false;
 scene.add(wallLeft);
 // Bare arena slab with restrained edge markings (geometry, not textures).
 const edgeMat = new THREE.MeshBasicMaterial({ color: 0x8e3231, transparent: true, opacity: 0.65 });
@@ -77,19 +76,19 @@ player.group.add(camera);
 
 const hands = new THREE.Group();
 camera.add(hands);
-const skinMat = new THREE.MeshStandardMaterial({ color: 0x967064, roughness: 0.75 });
-const sleeveMat = new THREE.MeshStandardMaterial({ color: 0x28272a, roughness: 0.9 });
+const skinMat = lit(0x967064);
+const sleeveMat = lit(0x28272a);
 function makeForearm(side) {
   const arm = new THREE.Group();
   arm.position.set(side * 0.28, -0.34, -0.48);
   arm.rotation.z = side * -0.24;
-  const sleeve = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.33, 3, 7), sleeveMat);
+  const sleeve = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.33, 2, 5), sleeveMat);
   sleeve.rotation.x = -0.48;
   sleeve.position.set(0, -0.11, 0.08);
   arm.add(sleeve);
   const hand = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.13, 0.16), skinMat);
   hand.position.set(0, -0.25, -0.04);
-  hand.castShadow = true;
+  hand.castShadow = false;
   arm.add(hand);
   hands.add(arm);
   return arm;
@@ -167,7 +166,7 @@ function syncViewWeapon() {
   viewWeapon.scale.setScalar(0.72);
   viewWeapon.position.set(0.27, -0.32, -0.54);
   viewWeapon.rotation.set(-0.2, 0.12, -0.38);
-  viewWeapon.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+  viewWeapon.traverse(o => { if (o.isMesh) { o.castShadow = false; o.frustumCulled = false; } });
   hands.add(viewWeapon);
 }
 function useWeapon(kind) {
@@ -183,7 +182,7 @@ function useWeapon(kind) {
   $('state-label').textContent = 'ARMED';
 }
 function spawnNPC() {
-  if (!player.alive || npcs.filter(n => n.alive).length >= 12) return;
+  if (!player.alive || npcs.filter(n => n.alive).length >= QUALITY.maxNPCs) return;
   const angle = Math.random() * Math.PI * 2;
   const radius = 1.35 + Math.random() * 0.25;
   const x = THREE.MathUtils.clamp(player.group.position.x + Math.cos(angle) * radius, -1.55, 1.55);
@@ -311,6 +310,16 @@ function updateHud() {
   }
 }
 
+function requestPointerLock() {
+  if (matchMedia('(pointer: coarse)').matches || typeof canvas.requestPointerLock !== 'function') return;
+  try {
+    // Pointer lock is unavailable in some embedded/mobile contexts and may
+    // reject asynchronously. Mouse look should never prevent the game starting.
+    const request = canvas.requestPointerLock();
+    request?.catch(() => {});
+  } catch {}
+}
+
 function startGame() {
   audio.unlock();
   $('start').classList.add('hidden');
@@ -318,7 +327,7 @@ function startGame() {
   document.body.classList.add('playing');
   if (matchMedia('(pointer: coarse)').matches) document.body.classList.add('touch');
   if (npcs.filter(n => n.alive).length === 0) spawnNPC();
-  canvas.requestPointerLock?.();
+  requestPointerLock();
 }
 $('start-btn').addEventListener('click', startGame);
 $('respawn-btn').addEventListener('click', () => {
@@ -335,7 +344,7 @@ $('respawn-btn').addEventListener('click', () => {
   $('death').classList.add('hidden');
   spawnNPC();
   audio.unlock();
-  canvas.requestPointerLock?.();
+  requestPointerLock();
 });
 $('mute').addEventListener('click', () => {
   audio.setMuted(!audio.muted);
@@ -362,7 +371,7 @@ window.addEventListener('mousemove', (event) => {
 });
 document.addEventListener('pointerlockchange', () => { inputLocked = document.pointerLockElement === canvas; });
 canvas.addEventListener('click', () => {
-  if (document.body.classList.contains('playing') && player.alive && !matchMedia('(pointer: coarse)').matches && !inputLocked) canvas.requestPointerLock?.();
+  if (document.body.classList.contains('playing') && player.alive && !inputLocked) requestPointerLock();
 });
 canvas.addEventListener('contextmenu', event => event.preventDefault());
 canvas.addEventListener('mousedown', event => {
@@ -499,6 +508,6 @@ window.addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.7));
+  renderer.setPixelRatio(renderPixelRatio());
 });
 requestAnimationFrame(frame);

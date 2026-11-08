@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { lit } from './quality.js';
 
 export const WEAPON_DEFS = {
   fist: {
@@ -15,24 +16,24 @@ export const WEAPON_DEFS = {
   }
 };
 
-const steel = new THREE.MeshStandardMaterial({ color: 0x9aa6ae, roughness: 0.34, metalness: 0.85 });
-const steelDark = new THREE.MeshStandardMaterial({ color: 0x59636b, roughness: 0.45, metalness: 0.8 });
-const edgeMat = new THREE.MeshStandardMaterial({ color: 0xd6e6ef, roughness: 0.2, metalness: 0.95, emissive: 0x2a3d48, emissiveIntensity: 0.6 });
-const wood = new THREE.MeshStandardMaterial({ color: 0x6f4728, roughness: 0.82, metalness: 0.02 });
-const woodDark = new THREE.MeshStandardMaterial({ color: 0x4a2d18, roughness: 0.85 });
-const wrap = new THREE.MeshStandardMaterial({ color: 0x211a17, roughness: 0.95 });
-const accent = new THREE.MeshStandardMaterial({ color: 0x9c1b1b, roughness: 0.7 });
+const steel = lit(0x9aa6ae);
+const steelDark = lit(0x59636b);
+const edgeMat = lit(0xd6e6ef, { emissive: 0x2a3d48, emissiveIntensity: 0.6 });
+const wood = lit(0x6f4728);
+const woodDark = lit(0x4a2d18);
+const wrap = lit(0x211a17);
+const accent = lit(0x9c1b1b);
 
 function handle(length, radius, bandCount, bandYs) {
   const g = new THREE.Group();
-  const h = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.82, radius, length, 8), wood);
+  const h = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.82, radius, length, 5), wood);
   h.position.y = length / 2 - 0.18;
-  h.castShadow = true;
+  h.castShadow = false;
   g.add(h);
   for (let i = 0; i < bandCount; i++) {
-    const band = new THREE.Mesh(new THREE.CylinderGeometry(radius * 1.12, radius * 1.12, 0.026, 8), i === 0 ? accent : wrap);
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(radius * 1.12, radius * 1.12, 0.026, 5), i === 0 ? accent : wrap);
     band.position.y = bandYs[i];
-    band.castShadow = true;
+    band.castShadow = false;
     g.add(band);
   }
   return g;
@@ -55,24 +56,24 @@ function buildHatchet() {
   shape.lineTo(0.02, 0.09);
   shape.lineTo(-0.015, 0.045);
   shape.closePath();
-  const bladeGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.055, bevelEnabled: true, bevelSize: 0.006, bevelThickness: 0.005, bevelSegments: 1, steps: 1 });
+  const bladeGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.055, bevelEnabled: false, steps: 1 });
   bladeGeo.translate(0, 0, -0.0275);
   const blade = new THREE.Mesh(bladeGeo, steel);
-  blade.castShadow = true;
+  blade.castShadow = false;
   head.add(blade);
 
   const edge = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.16, 0.062), edgeMat);
   edge.position.set(0.222, 0.005, 0);
   edge.rotation.z = -0.2;
-  edge.castShadow = true;
+  edge.castShadow = false;
   head.add(edge);
 
   const poll = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.075), steelDark);
   poll.position.set(-0.04, 0.0, 0);
-  poll.castShadow = true;
+  poll.castShadow = false;
   head.add(poll);
 
-  const eye = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.075, 8), steelDark);
+  const eye = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.075, 5), steelDark);
   eye.rotation.x = Math.PI / 2;
   eye.position.set(0.0, 0.0, 0);
   head.add(eye);
@@ -89,24 +90,24 @@ function buildPickaxe() {
   g.add(head);
 
   const center = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.13, 0.1), steelDark);
-  center.castShadow = true;
+  center.castShadow = false;
   head.add(center);
 
   for (const side of [-1, 1]) {
-    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.032, 0.3, 4), steel);
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.032, 0.3, 3), steel);
     arm.rotation.z = Math.PI / 2;
     arm.rotation.y = Math.PI / 4;
     arm.rotation.x = side * -0.18;
     arm.position.set(side * 0.2, side * -0.03, 0);
-    arm.castShadow = true;
+    arm.castShadow = false;
     head.add(arm);
 
-    const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.04, 0.22, 4), steel);
+    const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.04, 0.22, 3), steel);
     tip.rotation.z = Math.PI / 2;
     tip.rotation.y = Math.PI / 4;
     tip.rotation.x = side * -0.32;
     tip.position.set(side * 0.42, side * -0.08, 0);
-    tip.castShadow = true;
+    tip.castShadow = false;
     head.add(tip);
 
     const glint = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.008, 0.03), edgeMat);
@@ -122,8 +123,8 @@ export function buildWeaponMesh(kind) {
   return kind === 'pickaxe' ? buildPickaxe() : buildHatchet();
 }
 
-const ringGeo = new THREE.RingGeometry(0.34, 0.44, 32);
-const ringMat = new THREE.MeshBasicMaterial({ color: 0xffa347, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+const ringGeo = new THREE.RingGeometry(0.34, 0.44, 12);
+const ringMat = new THREE.MeshBasicMaterial({ color: 0xffa347, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false });
 
 export class WeaponDrop {
   constructor(kind, scene, fx, x, z) {
@@ -134,7 +135,7 @@ export class WeaponDrop {
     this.group = buildWeaponMesh(kind);
     this.group.position.set(x, 0.185, z);
     this.group.rotation.y = Math.random() * Math.PI * 2;
-    this.group.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    this.group.traverse(o => { if (o.isMesh) o.castShadow = false; });
 
     this.ring = new THREE.Mesh(ringGeo, ringMat.clone());
     this.ring.rotation.x = -Math.PI / 2;

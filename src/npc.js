@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { lit } from './quality.js';
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -41,7 +42,7 @@ export class GoreNPC {
 
   build() {
     const M = (color, opts = {}) => {
-      const m = new THREE.MeshStandardMaterial({ color, roughness: 0.72, metalness: 0.02, ...opts });
+      const m = lit(color, opts);
       this.materials.push(m);
       return m;
     };
@@ -58,7 +59,7 @@ export class GoreNPC {
     const add = (parent, geo, mat, x, y, z) => {
       const m = new THREE.Mesh(geo, mat);
       m.position.set(x, y, z);
-      m.castShadow = true;
+      m.castShadow = false;
       m.receiveShadow = false;
       parent.add(m);
       return m;
@@ -67,18 +68,18 @@ export class GoreNPC {
     // torso + hips
     const hips = add(this.root, new THREE.BoxGeometry(0.3, 0.2, 0.22), shorts, 0, 0.72, 0);
     hips.geometry.translate(0, 0, 0);
-    const torso = add(this.root, new THREE.CapsuleGeometry(0.185, 0.34, 4, 8), skin, 0, 1.04, 0);
+    const torso = add(this.root, new THREE.CapsuleGeometry(0.185, 0.34, 2, 5), skin, 0, 1.04, 0);
     torso.scale.set(1.1, 1, 0.72);
 
     // exposed rib cage (gore)
-    const wound = add(this.root, new THREE.SphereGeometry(0.13, 10, 8), bloodBright, 0, 1.08, 0.135);
+    const wound = add(this.root, new THREE.SphereGeometry(0.13, 7, 5), bloodBright, 0, 1.08, 0.135);
     wound.scale.set(1.25, 1.35, 0.32);
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       const rib = add(this.root, new THREE.BoxGeometry(0.19 - i * 0.025, 0.017, 0.02), bone, 0, 1.15 - i * 0.07, 0.163);
       rib.rotation.z = (i % 2 ? 1 : -1) * 0.12;
     }
     // splatter patches
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 3; i++) {
       const p = add(this.root, new THREE.SphereGeometry(rand(0.02, 0.05), 7, 5), i % 2 ? blood : bloodBright,
         rand(-0.16, 0.16), rand(0.75, 1.3), rand(0.1, 0.15));
       p.scale.set(rand(0.7, 1.6), rand(0.7, 1.5), 0.28);
@@ -89,7 +90,7 @@ export class GoreNPC {
     headGroup.position.set(0, 1.47, 0.01);
     this.root.add(headGroup);
     this.head = headGroup;
-    const skull = add(headGroup, new THREE.SphereGeometry(0.155, 12, 10), skin, 0, 0, 0);
+    const skull = add(headGroup, new THREE.SphereGeometry(0.155, 8, 6), skin, 0, 0, 0);
     skull.scale.set(0.94, 1.06, 0.96);
     add(headGroup, new THREE.BoxGeometry(0.2, 0.07, 0.11), skinDark, 0, 0.055, 0.09);
     add(headGroup, new THREE.BoxGeometry(0.13, 0.05, 0.09), mouth, 0, -0.075, 0.125);
@@ -101,8 +102,8 @@ export class GoreNPC {
       e.scale.set(1.2, 0.7, 0.6);
     }
     // head wounds
-    for (let i = 0; i < 3; i++) {
-      const p = add(headGroup, new THREE.SphereGeometry(rand(0.025, 0.045), 6, 5), blood, rand(-0.1, 0.1), rand(0.02, 0.11), rand(0.1, 0.14));
+    for (let i = 0; i < 1; i++) {
+      const p = add(headGroup, new THREE.SphereGeometry(rand(0.025, 0.045), 5, 4), blood, rand(-0.1, 0.1), rand(0.02, 0.11), rand(0.1, 0.14));
       p.scale.set(1, 0.6, 0.25);
     }
 
@@ -111,11 +112,11 @@ export class GoreNPC {
       const pivot = new THREE.Group();
       pivot.position.set(side * 0.27, 1.22, 0);
       this.root.add(pivot);
-      const upper = add(pivot, new THREE.CapsuleGeometry(0.055, 0.2, 3, 6), skin, 0, -0.14, 0);
+      const upper = add(pivot, new THREE.CapsuleGeometry(0.055, 0.2, 2, 4), skin, 0, -0.14, 0);
       upper.scale.set(1, 1, 0.9);
-      const fore = add(pivot, new THREE.CapsuleGeometry(0.05, 0.19, 3, 6), skinDark, 0, -0.38, 0);
+      const fore = add(pivot, new THREE.CapsuleGeometry(0.05, 0.19, 2, 4), skinDark, 0, -0.38, 0);
       fore.rotation.z = side * 0.05;
-      const hand = add(pivot, new THREE.SphereGeometry(0.068, 8, 6), bloodBright, 0, -0.53, 0.02);
+      const hand = add(pivot, new THREE.SphereGeometry(0.068, 6, 4), bloodBright, 0, -0.53, 0.02);
       hand.scale.set(0.85, 1, 0.9);
       // arm blood
       const smear = add(pivot, new THREE.SphereGeometry(0.04, 6, 5), blood, side * 0.03, -0.26, 0.02);
@@ -130,24 +131,15 @@ export class GoreNPC {
       const pivot = new THREE.Group();
       pivot.position.set(side * 0.11, 0.68, 0);
       this.root.add(pivot);
-      add(pivot, new THREE.CapsuleGeometry(0.07, 0.22, 3, 6), skinDark, 0, -0.16, 0);
-      add(pivot, new THREE.CapsuleGeometry(0.058, 0.2, 3, 6), skin, 0, -0.42, 0);
+      add(pivot, new THREE.CapsuleGeometry(0.07, 0.22, 2, 4), skinDark, 0, -0.16, 0);
+      add(pivot, new THREE.CapsuleGeometry(0.058, 0.2, 2, 4), skin, 0, -0.42, 0);
       add(pivot, new THREE.BoxGeometry(0.11, 0.07, 0.2), shorts, 0, -0.6, 0.035);
       return pivot;
     };
     this.legL = makeLeg(-1);
     this.legR = makeLeg(1);
 
-    // chains dangling from the wrists — spawner flavor
-    for (const side of [-1, 1]) {
-      for (let i = 0; i < 3; i++) {
-        const link = new THREE.Mesh(new THREE.TorusGeometry(0.022, 0.007, 4, 8), new THREE.MeshStandardMaterial({ color: 0x5a5550, metalness: 0.9, roughness: 0.4 }));
-        link.position.set(side * 0.27, 0.62 - i * 0.035, 0.03);
-        link.rotation.x = i % 2 ? 0 : Math.PI / 2;
-        link.castShadow = true;
-        this.root.add(link);
-      }
-    }
+    // Wrist chains are omitted in the low-cost phone profile.
   }
 
   buildBar() {
