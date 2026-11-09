@@ -13,7 +13,9 @@ export const WEAPON_DEFS = {
   hatchet: {
     name: 'HATCHET', damage: 20, range: 1.02, cooldown: 0.4, knockback: 2.1, speed: 'QUICK', arc: 1.45,
     throwDamage: 30
-  }
+  },
+  pistol: { name: 'SIDEARM', damage: 34, range: 18, cooldown: 0.32, knockback: 0.5, speed: 'SEMI', ammo: 48, magazine: 12, spread: 0.015 },
+  rifle: { name: 'CARBINE', damage: 22, range: 27, cooldown: 0.14, knockback: 0.3, speed: 'AUTO', ammo: 120, magazine: 30, spread: 0.035 }
 };
 
 const steel = lit(0x9aa6ae);
@@ -119,8 +121,29 @@ function buildPickaxe() {
   return g;
 }
 
+function buildGun() {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.14, 0.42), steelDark);
+  body.position.set(0, 0, -0.08);
+  g.add(body);
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.28, 6), steel);
+  barrel.rotation.x = Math.PI / 2;
+  barrel.position.z = -0.39;
+  g.add(barrel);
+  const grip = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.22, 0.12), woodDark);
+  grip.position.set(0, -0.16, 0.02);
+  grip.rotation.x = -0.18;
+  g.add(grip);
+  const sight = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.045, 0.06), edgeMat);
+  sight.position.set(0, 0.09, -0.08);
+  g.add(sight);
+  return g;
+}
+
 export function buildWeaponMesh(kind) {
-  return kind === 'pickaxe' ? buildPickaxe() : buildHatchet();
+  if (kind === 'pickaxe') return buildPickaxe();
+  if (kind === 'pistol' || kind === 'rifle') return buildGun();
+  return buildHatchet();
 }
 
 const ringGeo = new THREE.RingGeometry(0.34, 0.44, 12);
@@ -254,5 +277,7 @@ function rand(a, b) { return a + Math.random() * (b - a); }
 export const WEAPON_ICONS = {
   fist: `<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20V13a2.5 2.5 0 0 1 5 0v6"/><path d="M16 19V11a2.5 2.5 0 0 1 5 0v8"/><path d="M21 19v-7a2.5 2.5 0 0 1 5 0v8"/><path d="M26 20v-4a2.5 2.5 0 0 1 5 0v8c0 5-4 9-9 9h-3c-3 0-5-1-7-3l-4-4c-1.4-1.4-1-3.2.4-4 1.3-.7 2.8-.3 3.8.9l2 2.1"/><path d="M10 14 8 12"/></svg>`,
   hatchet: `<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M16 34 26 8"/><path d="M22 12c3-3 8-3 11 0-3 1-5 4-5 7-2-1-4-2-6-2 1-2 1-4 0-5Z"/><path d="M14 28l4 2"/><path d="M19 13l3 1"/></svg>`,
-  pickaxe: `<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20 36 22 15"/><path d="M7 10c8-4 18-4 26 0-4 1-7 3-8 6-2-2-8-2-10 0-1-3-4-5-8-6Z"/><path d="M8 9c1 2 1 4 0 6M32 9c-1 2-1 4 0 6"/></svg>`
+  pickaxe: `<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20 36 22 15"/><path d="M7 10c8-4 18-4 26 0-4 1-7 3-8 6-2-2-8-2-10 0-1-3-4-5-8-6Z"/><path d="M8 9c1 2 1 4 0 6M32 9c-1 2-1 4 0 6"/></svg>`,
+  pistol: `<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h26l4 4v5H22l-2 12h-7l1-12H5z"/><path d="M25 21v5M10 15h13"/></svg>`,
+  rifle: `<svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16h31v5H20l-5 8H9l3-8H3z"/><path d="M24 21v6M31 13v3M7 14v2"/></svg>`
 };

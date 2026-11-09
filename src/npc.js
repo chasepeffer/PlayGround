@@ -27,6 +27,8 @@ export class GoreNPC {
     this.throwT = 0;
     this.grabT = 0;
     this.baseScale = opts.scale || 1;
+    this.bounds = opts.bounds || 1.66;
+    this.center = opts.center || { x: 0, z: 0 };
 
     this.group = new THREE.Group();
     this.group.position.set(x, 0, z);
@@ -423,7 +425,7 @@ export class GoreNPC {
   }
 
   clampArena(thrown = false) {
-    const lim = 1.66;
+    const lim = this.bounds;
     const p = this.group.position;
     if (p.x > lim) { p.x = lim; if (thrown) this.vel.x *= -0.4; }
     if (p.x < -lim) { p.x = -lim; if (thrown) this.vel.x *= -0.4; }

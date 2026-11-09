@@ -58,6 +58,63 @@ for (const [x, z, sx, sz] of [[0, 1.94, 3.85, 0.018], [1.94, 0, 0.018, 3.85]]) {
   scene.add(line);
 }
 
+// A roomy sandbox and a chain of separated survival islands share the original pit.
+const mapGround = new THREE.Mesh(new THREE.PlaneGeometry(54, 54), lit(0x485044));
+mapGround.rotation.x = -Math.PI / 2;
+mapGround.position.y = -0.19;
+mapGround.visible = false;
+scene.add(mapGround);
+const ocean = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), lit(0x152d38));
+ocean.rotation.x = -Math.PI / 2;
+ocean.position.y = -1.15;
+scene.add(ocean);
+const islandPositions = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(24, 0, 0), new THREE.Vector3(0, 0, 24), new THREE.Vector3(-24, 0, 0)];
+const islandGroups = [];
+const resourceNodes = [];
+let mode = 'sandbox';
+let currentIsland = 0;
+let wave = 0;
+let waveDelay = 0;
+const resources = { wood: 0, stone: 0 };
+const inventory = { pickaxe: null, hatchet: null, pistol: null, rifle: null };
+const slotKinds = ['fist', 'pickaxe', 'hatchet', 'pistol', 'rifle'];
+function makeResource(type, x, z, island) {
+  const group = new THREE.Group();
+  group.position.set(x, 0, z);
+  let mesh;
+  if (type === 'wood') {
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 1.25, 5), lit(0x67452b));
+    trunk.position.y = 0.62;
+    const crown = new THREE.Mesh(new THREE.ConeGeometry(0.72, 1.5, 6), lit(0x405b36));
+    crown.position.y = 1.75;
+    group.add(trunk, crown);
+    mesh = crown;
+  } else {
+    mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(0.58, 0), lit(0x777a78));
+    mesh.position.y = 0.48;
+    mesh.scale.set(1.1, 0.8, 0.9);
+    group.add(mesh);
+  }
+  scene.add(group);
+  const node = { type, group, mesh, health: 3, island, active: true };
+  resourceNodes.push(node);
+  return node;
+}
+for (let i = 0; i < islandPositions.length; i++) {
+  const p = islandPositions[i];
+  const group = new THREE.Group();
+  group.position.copy(p);
+  const land = new THREE.Mesh(new THREE.BoxGeometry(18, 0.55, 18), lit(i === 0 ? 0x56604a : 0x62604b));
+  land.position.y = -0.38;
+  group.add(land);
+  const shore = new THREE.Mesh(new THREE.BoxGeometry(18.2, 0.12, 18.2), lit(0x8c7958));
+  shore.position.y = -0.66;
+  group.add(shore);
+  scene.add(group);
+  islandGroups.push(group);
+  for (const [type, x, z] of [['wood', -5.3, -4.4], ['wood', 5.2, -4.5], ['stone', -5, 4.7], ['stone', 5.1, 4.5], ['wood', 0.8, 6.1]]) makeResource(type, p.x + x, p.z + z, i);
+}
+
 const fx = new FX(scene);
 const audio = new Sound();
 const player = {
@@ -100,9 +157,15 @@ let swingT = 0;
 
 const npcs = [];
 const weapons = [
-  new WeaponDrop('pickaxe', scene, fx, 1.28, -0.9),
-  new WeaponDrop('hatchet', scene, fx, -0.7, 1.32)
+  new WeaponDrop('pickaxe', scene, fx, -1.25, -0.9),
+  new WeaponDrop('hatchet', scene, fx, -0.55, -0.9),
+  new WeaponDrop('pistol', scene, fx, 0.25, -0.9),
+  new WeaponDrop('rifle', scene, fx, 1.05, -0.9)
 ];
+for (const weapon of weapons) {
+  weapon.island = 0;
+  weapon.ammo = WEAPON_DEFS[weapon.kind].ammo || 0;
+}
 let heldNPC = null;
 let heldWeapon = null;
 let kills = 0;
@@ -151,6 +214,28 @@ function addFeed(text) {
   feed.prepend(row);
   while (feed.children.length > 3) feed.lastElementChild.remove();
 }
+function renderInventory() {
+  const root = $('inventory-slots');
+  root.innerHTML = '';
+  slotKinds.forEach((kind, index) => {
+    const item = kind === 'fist' || inventory[kind];
+    const slot = document.createElement('button');
+    slot.type = 'button';
+    slot.className = `inventory-slot${item ? '' : ' empty'}${(heldWeapon?.kind || 'fist') === kind ? ' selected' : ''}`;
+    slot.setAttribute('aria-label', `${index + 1}: ${kind}${item && inventory[kind]?.ammo != null ? `, ${inventory[kind].ammo} rounds` : ''}`);
+    slot.innerHTML = `<span class="slot-key">${index + 1}</span><span class="slot-icon">${WEAPON_ICONS[kind]}</span>`;
+    slot.addEventListener('click', () => equipSlot(kind));
+    root.append(slot);
+  });
+}
+function updateInventoryHud() {
+  $('resource-count').textContent = `${resources.wood} / ${resources.stone}`;
+  const item = heldWeapon;
+  $('ammo-label').textContent = item && WEAPON_DEFS[item.kind].magazine
+    ? `AMMO ${item.ammo} · ${WEAPON_DEFS[item.kind].magazine} MAG` : (item ? 'MELEE' : 'MELEE');
+  $('travel-btn').disabled = mode !== 'survival' || resources.wood < 2 || resources.stone < 1;
+  renderInventory();
+}
 function setWeapon(kind) {
   const def = WEAPON_DEFS[kind];
   $('weapon-name').textContent = def.name;
@@ -158,6 +243,7 @@ function setWeapon(kind) {
   $('weapon-spd').textContent = def.speed;
   $('weapon-icon').innerHTML = WEAPON_ICONS[kind];
   $('weapon-bar-fill').style.width = `${Math.min(100, 25 + def.damage * 1.9)}%`;
+  updateInventoryHud();
 }
 function syncViewWeapon() {
   if (viewWeapon) { hands.remove(viewWeapon); viewWeapon = null; }
@@ -169,27 +255,47 @@ function syncViewWeapon() {
   viewWeapon.traverse(o => { if (o.isMesh) { o.castShadow = false; o.frustumCulled = false; } });
   hands.add(viewWeapon);
 }
-function useWeapon(kind) {
-  audio.pickup();
-  if (heldWeapon) {
-    heldWeapon.dropToGround(player.group.position.clone().add(new THREE.Vector3(0.35, 0, 0.2)), yaw);
-  }
+function equipSlot(kind) {
+  if (kind !== 'fist' && !inventory[kind]) return;
   if (heldNPC) releaseNPC();
-  heldWeapon = kind;
-  heldWeapon.attach(hands);
+  if (heldWeapon) {
+    hands.remove(heldWeapon.group);
+    heldWeapon.state = 'inventory';
+  }
+  heldWeapon = kind === 'fist' ? null : inventory[kind];
+  if (heldWeapon) heldWeapon.attach(hands);
   syncViewWeapon();
-  setWeapon(kind.kind);
-  $('state-label').textContent = 'ARMED';
+  setWeapon(kind);
+  $('state-label').textContent = heldWeapon ? 'ARMED' : 'READY';
+  audio.ui();
+}
+function useWeapon(drop) {
+  audio.pickup();
+  const kind = drop.kind;
+  drop.state = 'inventory';
+  drop.group.visible = false;
+  if (inventory[kind] && inventory[kind] !== drop) {
+    inventory[kind].dropToGround(player.group.position.clone().add(new THREE.Vector3(0.4, 0, 0.2)), yaw);
+  }
+  inventory[kind] = drop;
+  equipSlot(kind);
+  addFeed(`${WEAPON_DEFS[kind].name} · EQUIPPED`);
 }
 function spawnNPC() {
   if (!player.alive || npcs.filter(n => n.alive).length >= QUALITY.maxNPCs) return;
+  const center = islandPositions[currentIsland];
   const angle = Math.random() * Math.PI * 2;
-  const radius = 1.35 + Math.random() * 0.25;
-  const x = THREE.MathUtils.clamp(player.group.position.x + Math.cos(angle) * radius, -1.55, 1.55);
-  const z = THREE.MathUtils.clamp(player.group.position.z + Math.sin(angle) * radius, -1.55, 1.55);
-  npcs.push(new GoreNPC(scene, fx, audio, x, z, { scale: 0.92 + Math.random() * 0.16 }));
+  const radius = mode === 'sandbox' ? 1.35 + Math.random() * 0.25 : 4.5 + Math.random() * 2.5;
+  const limit = mode === 'sandbox' ? 1.55 : 7.8;
+  const x = THREE.MathUtils.clamp(player.group.position.x + Math.cos(angle) * radius, center.x - limit, center.x + limit);
+  const z = THREE.MathUtils.clamp(player.group.position.z + Math.sin(angle) * radius, center.z - limit, center.z + limit);
+  npcs.push(new GoreNPC(scene, fx, audio, x, z, {
+    scale: 0.92 + Math.random() * 0.16,
+    bounds: mode === 'sandbox' ? 1.66 : 8.2,
+    center
+  }));
   audio.spawn();
-  addFeed('GORE NPC · SPAWNED');
+  addFeed(mode === 'survival' ? `WAVE ${wave} · GORE SPAWNED` : 'GORE NPC · SPAWNED');
 }
 
 function nearestTarget(maxDist = 1.65) {
@@ -205,7 +311,8 @@ function nearestTarget(maxDist = 1.65) {
     if (score < bestScore) { best = { obj, type, dist }; bestScore = score; }
   };
   for (const npc of npcs) if (npc.alive && npc.state !== 'grabbed') consider(npc, npc.group.position, 'npc');
-  for (const weapon of weapons) if (weapon.state === 'ground') consider(weapon, weapon.group.position, 'weapon');
+  for (const weapon of weapons) if (weapon.state === 'ground' && (mode === 'sandbox' || weapon.island === currentIsland)) consider(weapon, weapon.group.position, 'weapon');
+  for (const node of resourceNodes) if (node.active && (mode === 'sandbox' || node.island === currentIsland)) consider(node, node.group.position, 'resource');
   return best;
 }
 function releaseNPC() {
@@ -214,14 +321,30 @@ function releaseNPC() {
   heldNPC = null;
   $('state-label').textContent = heldWeapon ? 'ARMED' : 'READY';
 }
+function gatherNode(node) {
+  if (!node.active) return;
+  if (node.type === 'wood' && !inventory.hatchet) { addFeed('NEED A HATCHET'); return; }
+  if (node.type === 'stone' && !inventory.pickaxe) { addFeed('NEED A PICKAXE'); return; }
+  node.health--;
+  audio.swing();
+  fx.slash(node.group.position.clone().setY(0.8), yaw, node.type === 'wood' ? 0x9bc779 : 0xc5cbd0);
+  if (node.health <= 0) {
+    node.active = false;
+    node.group.visible = false;
+    resources[node.type] += node.type === 'wood' ? 3 : 2;
+    updateInventoryHud();
+    addFeed(`+${node.type === 'wood' ? 3 : 2} ${node.type.toUpperCase()}`);
+    audio.pickup();
+  }
+}
 function interact() {
   if (!player.alive) return;
   if (heldNPC) { releaseNPC(); audio.grab(); return; }
-  const target = nearestTarget(1.7);
+  const target = nearestTarget(1.9);
   if (!target) return;
-  if (target.type === 'weapon') {
-    useWeapon(target.obj);
-  } else {
+  if (target.type === 'weapon') useWeapon(target.obj);
+  else if (target.type === 'resource') gatherNode(target.obj);
+  else {
     heldNPC = target.obj;
     heldNPC.setGrabbed(player);
     audio.grab();
@@ -258,8 +381,6 @@ function attack() {
   const kind = heldWeapon?.kind || 'fist';
   const def = WEAPON_DEFS[kind];
   hitCooldown = def.cooldown;
-  swingT = 0.24;
-  if (kind === 'fist') audio.punch(); else audio.swing();
   const origin = player.group.position;
   let target = null, best = Infinity;
   for (const npc of npcs) {
@@ -268,16 +389,32 @@ function attack() {
     const dist = Math.hypot(dx, dz);
     if (dist > def.range + (npc.baseScale * 0.22)) continue;
     const dot = (dx * player.forward.x + dz * player.forward.z) / Math.max(dist, 0.001);
-    if (dot < 0.28) continue;
+    if (dot < (def.magazine ? 0.975 : 0.28)) continue;
     if (dist < best) { target = npc; best = dist; }
   }
+  if (def.magazine) {
+    if (!heldWeapon || heldWeapon.ammo <= 0) { addFeed('OUT OF AMMO'); audio.ui(); return; }
+    heldWeapon.ammo--;
+    updateInventoryHud();
+    audio.swing();
+    fx.slash(origin.clone().addScaledVector(player.forward, 0.65).setY(1.25), yaw, 0xffb15c);
+    if (target) {
+      game.hitNPC(target, def.damage, player.forward, { weapon: kind });
+      fx.bloodBurst(target.group.position.clone().setY(1.08), player.forward, 10, 0.9);
+    }
+    return;
+  }
+  swingT = 0.24;
+  if (kind === 'fist') audio.punch(); else audio.swing();
   if (target) {
     game.hitNPC(target, def.damage, player.forward, { weapon: kind });
     fx.bloodBurst(target.group.position.clone().setY(1.08), player.forward, kind === 'fist' ? 8 : 13, kind === 'fist' ? 0.65 : 1.05);
     if (kind !== 'fist') fx.slash(target.group.position.clone(), yaw, kind === 'pickaxe' ? 0xffb15c : 0xe9d2bc);
     if (kind !== 'fist') audio.hit();
   } else {
-    fx.slash(origin.clone().addScaledVector(player.forward, 0.62).setY(1.05), yaw, kind === 'fist' ? 0xcaa88b : 0xffb15c);
+    const nodeTarget = nearestTarget(def.range);
+    if (nodeTarget?.type === 'resource' && nodeTarget.dist <= def.range) gatherNode(nodeTarget.obj);
+    else fx.slash(origin.clone().addScaledVector(player.forward, 0.62).setY(1.05), yaw, kind === 'fist' ? 0xcaa88b : 0xffb15c);
   }
 }
 
@@ -289,9 +426,10 @@ function updatePrompt() {
   } else {
     const target = nearestTarget(1.7);
     prompt.classList.toggle('show', !!target);
-    if (target) $('prompt-text').textContent = target.type === 'npc' ? 'GRAB GORE' : `PICK UP ${target.obj.kind.toUpperCase()}`;
+    if (target) $('prompt-text').textContent = target.type === 'npc' ? 'GRAB GORE'
+      : target.type === 'resource' ? `GATHER ${target.obj.type.toUpperCase()}` : `PICK UP ${target.obj.kind.toUpperCase()}`;
   }
-  $('crosshair').classList.toggle('hot', !!nearestTarget(1.7));
+  $('crosshair').classList.toggle('hot', !!nearestTarget(1.9));
 }
 
 function updateHud() {
@@ -310,6 +448,52 @@ function updateHud() {
   }
 }
 
+function updateIslandVisibility() {
+  islandGroups.forEach((group, index) => { group.visible = mode === 'survival' || index === 0; });
+  resourceNodes.forEach(node => { node.group.visible = node.active && (mode === 'sandbox' || node.island === currentIsland); });
+  weapons.forEach(weapon => { weapon.group.visible = weapon.state !== 'held' && weapon.state !== 'inventory' && (mode === 'sandbox' || weapon.island === currentIsland); });
+}
+function setMode(nextMode) {
+  mode = nextMode;
+  currentIsland = 0;
+  wave = nextMode === 'survival' ? 1 : 0;
+  waveDelay = nextMode === 'survival' ? 0.6 : 0;
+  $('island-label').textContent = nextMode === 'survival' ? 'ISLAND 1 / 4 · WAVE 1' : 'SANDBOX';
+  $('brand-sub').textContent = nextMode === 'survival' ? 'ISLAND SURVIVAL · GATHER · FIGHT · SAIL' : '4 × 4 ROOM · EXPANDED SANDBOX';
+  mapGround.visible = nextMode === 'sandbox';
+  ocean.visible = nextMode === 'survival';
+  scene.fog.far = nextMode === 'sandbox' ? 46 : 70;
+  player.group.position.set(0, 0, 0.65);
+  resources.wood = 0;
+  resources.stone = 0;
+  if (nextMode === 'survival') pendingSpawns = 2;
+  else pendingSpawns = 0;
+  updateIslandVisibility();
+  updateInventoryHud();
+}
+let pendingSpawns = 0;
+function travel() {
+  if (mode !== 'survival' || resources.wood < 2 || resources.stone < 1) return;
+  resources.wood -= 2;
+  resources.stone -= 1;
+  for (const npc of npcs) if (!npc.removed) { npc.removed = true; npc.dispose(); }
+  npcs.length = 0;
+  if (heldNPC) { heldNPC = null; armL.rotation.x = 0; }
+  currentIsland = (currentIsland + 1) % islandPositions.length;
+  const p = islandPositions[currentIsland];
+  player.group.position.set(p.x, 0, p.z + 0.65);
+  wave++;
+  pendingSpawns = Math.min(5, wave + 1);
+  waveDelay = 1;
+  $('island-label').textContent = `ISLAND ${currentIsland + 1} / 4 · WAVE ${wave}`;
+  updateIslandVisibility();
+  updateInventoryHud();
+  addFeed(`SAILED TO ISLAND ${currentIsland + 1}`);
+  audio.ui();
+}
+$('sandbox-btn').addEventListener('click', () => { setMode('sandbox'); startGame(); });
+$('survival-btn').addEventListener('click', () => { setMode('survival'); startGame(); });
+$('travel-btn').addEventListener('click', travel);
 function requestPointerLock() {
   if (matchMedia('(pointer: coarse)').matches || typeof canvas.requestPointerLock !== 'function') return;
   try {
@@ -329,7 +513,7 @@ function startGame() {
   if (npcs.filter(n => n.alive).length === 0) spawnNPC();
   requestPointerLock();
 }
-$('start-btn').addEventListener('click', startGame);
+// Mode buttons above choose the ruleset and then start the session.
 $('respawn-btn').addEventListener('click', () => {
   player.health = player.maxHealth;
   player.alive = true;

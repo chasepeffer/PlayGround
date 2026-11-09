@@ -36,8 +36,17 @@
     <section class="score">
       <div class="score-row"><span class="tag">KILLS</span><b id="kill-count">0</b></div>
       <div class="score-row"><span class="tag">GORE</span><b id="npc-count">0</b></div>
+      <div class="score-row"><span class="tag">WOOD / STONE</span><b id="resource-count">0 / 0</b></div>
       <div id="feed" class="feed"></div>
     </section>
+
+    <section class="inventory" aria-label="Inventory">
+      <span class="inventory-label">LOADOUT · 1–5</span>
+      <div id="inventory-slots" class="inventory-slots"></div>
+      <div id="ammo-label" class="ammo-label">MELEE</div>
+      <div id="island-label" class="island-label">SANDBOX</div>
+    </section>
+    <button id="travel-btn" class="travel-btn" type="button">SAIL TO NEXT ISLAND</button>
 
     <section id="weapon-card" class="weapon-card">
       <div id="weapon-icon" class="weapon-icon"></div>
@@ -59,7 +68,7 @@
     <div id="prompt" class="prompt"><kbd>E</kbd><span id="prompt-text">GRAB</span></div>
 
     <div id="controls-hint" class="controls-hint">
-      <span><kbd>WASD</kbd> MOVE</span><span><kbd>MOUSE</kbd> LOOK</span><span><kbd>LMB</kbd> ATTACK</span><span><kbd>E</kbd> GRAB</span><span><kbd>F</kbd> THROW</span><span><kbd>Q</kbd> DROP</span><span><kbd>R</kbd> SPAWN GORE</span>
+      <span><kbd>WASD</kbd> MOVE</span><span><kbd>MOUSE</kbd> LOOK</span><span><kbd>LMB</kbd> ATTACK / FIRE</span><span><kbd>E</kbd> GATHER / PICK UP</span><span><kbd>1–5</kbd> INVENTORY</span><span><kbd>T</kbd> TRAVEL</span>
     </div>
 
     <div id="touch-ui" class="touch-ui">
@@ -86,7 +95,10 @@
         <div><b>02</b><span>WEAPONS</span></div>
         <div><b>∞</b><span>GORE</span></div>
       </div>
-      <button id="start-btn" class="start-btn" type="button">Start Game</button>
+      <div class="mode-select">
+        <button id="sandbox-btn" class="start-btn" type="button">Sandbox</button>
+        <button id="survival-btn" class="start-btn" type="button">Island Survival</button>
+      </div>
       <div class="start-controls">
         <span><kbd>WASD</kbd> move</span>
         <span><kbd>LMB</kbd> punch / swing</span>
