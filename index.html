@@ -18,7 +18,7 @@
   <div id="hud" class="hud">
     <header class="brand">
       <div class="brand-mark">GORE<span>PIT</span></div>
-      <div class="brand-sub">4 × 4 &nbsp;·&nbsp; TWO WALLS &nbsp;·&nbsp; NO EXIT</div>
+      <div id="brand-sub" class="brand-sub">THE GORE PIT</div>
     </header>
 
     <section class="vitals">
@@ -36,6 +36,7 @@
     <section class="score">
       <div class="score-row"><span class="tag">KILLS</span><b id="kill-count">0</b></div>
       <div class="score-row"><span class="tag">GORE</span><b id="npc-count">0</b></div>
+      <div class="score-row"><span class="tag">CASH</span><b id="cash-count">$0</b></div>
       <div id="feed" class="feed"></div>
     </section>
 
@@ -72,25 +73,38 @@
       </div>
     </div>
 
+    <button id="shop-toggle" class="shop-toggle" type="button">MERCHANT <kbd>B</kbd></button>
+    <aside id="shop" class="shop hidden" aria-label="Weapon merchant">
+      <div class="shop-head"><b>THE MERCHANT</b><button id="shop-close" type="button" aria-label="Close merchant">×</button></div>
+      <p>Trade gore for steel. Your sidearm is free.</p>
+      <button class="buy-item" data-weapon="pickaxe" type="button"><span>PICKAXE</span><b>$60</b></button>
+      <button class="buy-item" data-weapon="hatchet" type="button"><span>HATCHET</span><b>$40</b></button>
+      <div id="shop-message" class="shop-message">KILLS PAY $25</div>
+    </aside>
     <button id="mute" class="mute" type="button" aria-label="Toggle sound">SOUND ON</button>
   </div>
 
   <div id="start" class="start">
     <div class="start-inner">
-      <div class="start-kicker">A 4 × 4 CLOSE-QUARTERS EXPERIMENT</div>
+      <div class="start-kicker">A BLOOD-SOAKED SURVIVAL SANDBOX</div>
       <h1 class="start-title">GORE<span>PIT</span></h1>
-      <p class="start-copy">Two bare walls. One tiny slab. A spawner full of very grabbable, very breakable <b>Gore NPCs</b>. Pick up the pickaxe. Pick up the hatchet. Pick up a whole person.</p>
+      <p class="start-copy">A sidearm, a few dollars, and an endless tide of gore. Pick your ground, survive, and buy something heavier from the merchant.</p>
+      <div class="mode-select">
+        <label>MODE<select id="mode-select"><option value="arena">Arena · 4×4 room</option><option value="sandbox">Sandbox · open maps</option><option value="area">Area · hollow church</option></select></label>
+        <label id="map-field">SANDBOX MAP<select id="map-select"><option value="room">4×4 room</option><option value="island">Driftwood island</option><option value="tower">Cloudline skyscraper</option></select></label>
+      </div>
       <div class="start-specs">
-        <div><b>4×4</b><span>ARENA</span></div>
-        <div><b>02</b><span>WALLS</span></div>
-        <div><b>02</b><span>WEAPONS</span></div>
+        <div><b>9MM</b><span>SIDEARM</span></div>
+        <div><b>$25</b><span>PER KILL</span></div>
+        <div><b>02</b><span>MELEE ARMS</span></div>
         <div><b>∞</b><span>GORE</span></div>
       </div>
-      <button id="start-btn" class="start-btn" type="button">Start Game</button>
+      <button id="start-btn" class="start-btn" type="button">Start Run</button>
       <div class="start-controls">
         <span><kbd>WASD</kbd> move</span>
-        <span><kbd>LMB</kbd> punch / swing</span>
+        <span><kbd>LMB</kbd> fire / swing</span>
         <span><kbd>E</kbd> grab weapon or NPC</span>
+        <span><kbd>B</kbd> merchant</span>
         <span><kbd>F</kbd> throw</span>
         <span><kbd>R</kbd> spawn gore</span>
       </div>

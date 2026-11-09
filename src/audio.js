@@ -122,6 +122,12 @@ export class Sound {
     src.stop(t + dur + 0.02);
   }
 
+  pistol() {
+    this.noise(0.11, { gain: 0.34, freq: 2600, end: 280, q: 0.7 });
+    this.tone(170, 0.14, { type: 'sawtooth', gain: 0.2, end: 48 });
+    this.noise(0.06, { gain: 0.11, freq: 5200, end: 1800, delay: 0.015, type: 'highpass' });
+  }
+
   punch() {
     this.noise(0.09, { gain: 0.24, freq: 620, end: 130, q: 1.2 });
     this.tone(120, 0.1, { type: 'triangle', gain: 0.22, end: 46 });

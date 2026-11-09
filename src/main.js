@@ -4,6 +4,8 @@ import { Sound } from './audio.js';
 import { GoreNPC } from './npc.js';
 import { WeaponDrop, WEAPON_DEFS, WEAPON_ICONS, buildWeaponMesh } from './weapons.js';
 import { LOW, QUALITY, lit } from './quality.js';
+import { buildWorld } from './world.js';
+import { resolveWorldPosition } from './collision.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
@@ -33,30 +35,10 @@ keyLight.position.set(-3.5, 7, 4.5);
 keyLight.castShadow = QUALITY.shadows;
 scene.add(keyLight);
 
-const concrete = lit(0x555155);
-const wallMat = lit(0x39383d);
-const floor = new THREE.Mesh(new THREE.BoxGeometry(4, 0.16, 4), concrete);
-floor.position.y = -0.08;
-floor.receiveShadow = false;
-scene.add(floor);
-// Exactly two plain, untextured boundary walls; the other edges are open.
-const wallBack = new THREE.Mesh(new THREE.BoxGeometry(4, 2.8, 0.16), wallMat);
-wallBack.position.set(0, 1.32, -2.08);
-wallBack.receiveShadow = false;
-wallBack.castShadow = false;
-scene.add(wallBack);
-const wallLeft = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.8, 4), wallMat);
-wallLeft.position.set(-2.08, 1.32, 0);
-wallLeft.receiveShadow = false;
-wallLeft.castShadow = false;
-scene.add(wallLeft);
-// Bare arena slab with restrained edge markings (geometry, not textures).
-const edgeMat = new THREE.MeshBasicMaterial({ color: 0x8e3231, transparent: true, opacity: 0.65 });
-for (const [x, z, sx, sz] of [[0, 1.94, 3.85, 0.018], [1.94, 0, 0.018, 3.85]]) {
-  const line = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.008, sz), edgeMat);
-  line.position.set(x, 0.006, z);
-  scene.add(line);
-}
+let world = null;
+let selectedMode = 'arena';
+let selectedMap = 'room';
+const worldBounds = () => world?.bounds || { x: 1.76, z: 1.76 };
 
 const fx = new FX(scene);
 const audio = new Sound();
@@ -99,10 +81,85 @@ let viewWeapon = null;
 let swingT = 0;
 
 const npcs = [];
-const weapons = [
-  new WeaponDrop('pickaxe', scene, fx, 1.28, -0.9),
-  new WeaponDrop('hatchet', scene, fx, -0.7, 1.32)
-];
+let weapons = [];
+let cash = 0;
+let equipped = 'pistol';
+let shotCooldown = 0;
+const shopPrices = { pickaxe: 60, hatchet: 40 };
+function configureWorld(mode, map) {
+  if (world) scene.remove(world.root);
+  selectedMode = mode;
+  selectedMap = map;
+  world = buildWorld(scene, mode, map);
+  scene.background.setHex(world.sky);
+  scene.fog.color.setHex(world.fog);
+  scene.fog.near = mode === 'area' ? 18 : (map === 'island' ? 42 : 30);
+  scene.fog.far = mode === 'area' ? 42 : (map === 'island' ? 180 : 90);
+  for (const drop of weapons) drop.group.parent?.remove(drop.group);
+  weapons = [];
+  const placements = mode === 'area' ? [[-2.2, 0.3], [2.2, 1.8]] :
+    map === 'island' ? [[-5.8, 1.8], [5.4, 2.5]] :
+    map === 'tower' ? [[-7.5, 5.2], [7.2, 4.8]] : [[1.28, -0.9], [-0.7, 1.32]];
+  weapons.push(new WeaponDrop('pickaxe', scene, fx, ...placements[0]));
+  weapons.push(new WeaponDrop('hatchet', scene, fx, ...placements[1]));
+  const start = mode === 'area' ? [0, 8.6] : map === 'island' ? [0, 5.4] : map === 'tower' ? [0, 8.2] : [0, 0.65];
+  player.group.position.set(start[0], 0, start[1]);
+  yaw = 0;
+  pitch = 0;
+  $('brand-sub').textContent = world.title;
+  $('map-field').classList.toggle('hidden', mode !== 'sandbox');
+}
+
+function clearNPCs() {
+  for (const npc of npcs) if (!npc.removed) { npc.removed = true; npc.dispose(); }
+  npcs.length = 0;
+}
+
+function resetRun() {
+  clearNPCs();
+  if (heldNPC) heldNPC = null;
+  if (heldWeapon) hands.remove(heldWeapon.group);
+  heldWeapon = null;
+  weapons = [];
+  cash = 0;
+  kills = 0;
+  player.health = player.maxHealth;
+  player.alive = true;
+  shotCooldown = 0;
+  hitCooldown = 0;
+  fx.clear();
+  syncViewWeapon();
+  configureWorld($('mode-select').value, $('map-select').value);
+  $('cash-count').textContent = '$0';
+  $('kill-count').textContent = '0';
+  $('state-label').textContent = 'READY';
+  $('death').classList.add('hidden');
+  $('shop').classList.add('hidden');
+  yaw = 0;
+  pitch = 0;
+  player.group.rotation.y = 0;
+  camera.rotation.set(0, 0, 0);
+  refreshShop();
+}
+function makePistol() {
+  const pistol = new THREE.Group();
+  const metal = lit(0x34383d, { metalness: 0.55, roughness: 0.45 });
+  const grip = lit(0x211c1a);
+  const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.12, 0.38), metal);
+  barrel.position.set(0, 0.04, -0.14);
+  pistol.add(barrel);
+  const slide = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.11, 0.27), lit(0x6a7074));
+  slide.position.set(0, 0.12, -0.1);
+  pistol.add(slide);
+  const handle = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.2, 0.13), grip);
+  handle.position.set(0, -0.08, 0.02); handle.rotation.x = -0.18; pistol.add(handle);
+  pistol.position.set(0.23, -0.28, -0.48);
+  pistol.rotation.set(-0.08, 0, -0.04);
+  pistol.traverse(o => { if (o.isMesh) o.frustumCulled = false; });
+  return pistol;
+}
+let pistolView = makePistol();
+hands.add(pistolView);
 let heldNPC = null;
 let heldWeapon = null;
 let kills = 0;
@@ -132,7 +189,9 @@ const game = {
       this.shake(damage > 24 ? 0.16 : 0.08);
       if (npc.state === 'dead') {
         kills++;
-        addFeed(`${opts.weapon ? WEAPON_DEFS[opts.weapon].name : 'PUNCH'} · GORE DOWN`);
+        cash += 25;
+        $('cash-count').textContent = `$${cash}`;
+        addFeed(`${opts.weapon === 'pistol' ? '9MM' : (opts.weapon ? WEAPON_DEFS[opts.weapon].name : 'PUNCH')} · GORE DOWN · +$25`);
       }
     }
   }
@@ -152,16 +211,18 @@ function addFeed(text) {
   while (feed.children.length > 3) feed.lastElementChild.remove();
 }
 function setWeapon(kind) {
+  equipped = kind;
   const def = WEAPON_DEFS[kind];
-  $('weapon-name').textContent = def.name;
-  $('weapon-dmg').textContent = `${def.damage} DMG`;
-  $('weapon-spd').textContent = def.speed;
-  $('weapon-icon').innerHTML = WEAPON_ICONS[kind];
-  $('weapon-bar-fill').style.width = `${Math.min(100, 25 + def.damage * 1.9)}%`;
+  $('weapon-name').textContent = kind === 'pistol' ? '9MM SIDEARM' : def.name;
+  $('weapon-dmg').textContent = kind === 'pistol' ? '34 DMG' : `${def.damage} DMG`;
+  $('weapon-spd').textContent = kind === 'pistol' ? 'SEMI-AUTO' : def.speed;
+  $('weapon-icon').innerHTML = kind === 'pistol' ? '<span class="pistol-icon">▰</span>' : WEAPON_ICONS[kind];
+  $('weapon-bar-fill').style.width = `${kind === 'pistol' ? 64 : Math.min(100, 25 + def.damage * 1.9)}%`;
 }
 function syncViewWeapon() {
   if (viewWeapon) { hands.remove(viewWeapon); viewWeapon = null; }
-  if (!heldWeapon) return;
+  pistolView.visible = !heldWeapon;
+  if (!heldWeapon) { setWeapon('pistol'); return; }
   viewWeapon = buildWeaponMesh(heldWeapon.kind);
   viewWeapon.scale.setScalar(0.72);
   viewWeapon.position.set(0.27, -0.32, -0.54);
@@ -254,7 +315,29 @@ function dropWeapon() {
   audio.ui();
 }
 function attack() {
-  if (!player.alive || hitCooldown > 0) return;
+  if (!player.alive) return;
+  if (!heldWeapon) {
+    if (shotCooldown > 0) return;
+    shotCooldown = 0.3;
+    audio.pistol();
+    swingT = 0.12;
+    let target = null, bestAlong = Infinity;
+    const origin = player.group.position;
+    for (const npc of npcs) {
+      if (!npc.alive || npc.state === 'grabbed') continue;
+      const dx = npc.group.position.x - origin.x, dz = npc.group.position.z - origin.z;
+      const along = dx * player.forward.x + dz * player.forward.z;
+      const lateral = Math.abs(dx * player.forward.z - dz * player.forward.x);
+      if (along < 0 || along > 24 || lateral > 0.38 + along * 0.018) continue;
+      if (along < bestAlong) { target = npc; bestAlong = along; }
+    }
+    if (target) {
+      game.hitNPC(target, 34, player.forward, { weapon: 'pistol' });
+      fx.bloodBurst(target.group.position.clone().setY(1.08), player.forward, 10, 0.75);
+    }
+    return;
+  }
+  if (hitCooldown > 0) return;
   const kind = heldWeapon?.kind || 'fist';
   const def = WEAPON_DEFS[kind];
   hitCooldown = def.cooldown;
