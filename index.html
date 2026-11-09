@@ -18,7 +18,7 @@
   <div id="hud" class="hud">
     <header class="brand">
       <div class="brand-mark">GORE<span>PIT</span></div>
-      <div class="brand-sub">4 × 4 &nbsp;·&nbsp; TWO WALLS &nbsp;·&nbsp; NO EXIT</div>
+      <div id="map-label" class="brand-sub">4 × 4 &nbsp;·&nbsp; TWO WALLS &nbsp;·&nbsp; NO EXIT</div>
     </header>
 
     <section class="vitals">
@@ -36,7 +36,14 @@
     <section class="score">
       <div class="score-row"><span class="tag">KILLS</span><b id="kill-count">0</b></div>
       <div class="score-row"><span class="tag">GORE</span><b id="npc-count">0</b></div>
+      <div id="arena-stats" class="arena-stats hidden"><span>WAVE <b id="wave-number">0</b></span><span>$<b id="money-count">0</b></span></div>
       <div id="feed" class="feed"></div>
+    </section>
+
+    <section id="shop" class="shop hidden" aria-label="Merchant shop">
+      <div class="shop-head"><b>FIELD ARMORY</b><button id="shop-close" type="button" aria-label="Close shop">×</button></div>
+      <div class="shop-note">EQUIP · AMMO REFILLS ON RELOAD</div>
+      <div id="shop-items" class="shop-items"></div>
     </section>
 
     <section id="weapon-card" class="weapon-card">
@@ -81,11 +88,14 @@
       <h1 class="start-title">GORE<span>PIT</span></h1>
       <p class="start-copy">Two bare walls. One tiny slab. A spawner full of very grabbable, very breakable <b>Gore NPCs</b>. Pick up the pickaxe. Pick up the hatchet. Pick up a whole person.</p>
       <div class="start-specs">
-        <div><b>4×4</b><span>ARENA</span></div>
-        <div><b>02</b><span>WALLS</span></div>
-        <div><b>02</b><span>WEAPONS</span></div>
+        <div><b>04</b><span>MAPS</span></div>
+        <div><b>03</b><span>GUNS</span></div>
+        <div><b>04</b><span>GORE TYPES</span></div>
         <div><b>∞</b><span>GORE</span></div>
       </div>
+      <label class="map-picker" for="map-select"><span>CHOOSE YOUR PIT</span>
+        <select id="map-select" aria-label="Choose map"></select>
+      </label>
       <button id="start-btn" class="start-btn" type="button">Start Game</button>
       <div class="start-controls">
         <span><kbd>WASD</kbd> move</span>

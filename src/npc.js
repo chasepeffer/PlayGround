@@ -6,15 +6,44 @@ const lerp = (a, b, t) => a + (b - a) * t;
 
 function rand(a, b) { return a + Math.random() * (b - a); }
 
+const VARIANTS = {
+  shambler: {
+    maxHealth: 72, speed: 1.02, injuredSpeed: 1.42, damage: 6,
+    attackRange: 1.05, attackStartRange: 0.78, windup: 0.34,
+    cooldown: [1.45, 2.0], visualScale: 1, bodyWidth: 1, bodyDepth: 1,
+    skin: 0x8c6658, skinDark: 0x67443d, knockback: 1, gait: 1,
+  },
+  runner: {
+    maxHealth: 52, speed: 1.72, injuredSpeed: 2.0, damage: 5,
+    attackRange: 0.98, attackStartRange: 0.72, windup: 0.24,
+    cooldown: [0.85, 1.3], visualScale: 0.88, bodyWidth: 0.86, bodyDepth: 0.88,
+    skin: 0x92766c, skinDark: 0x62544f, knockback: 1.15, gait: 1.25,
+  },
+  brute: {
+    maxHealth: 170, speed: 0.7, injuredSpeed: 0.88, damage: 13,
+    attackRange: 1.38, attackStartRange: 1.04, windup: 0.58,
+    cooldown: [2.0, 2.7], visualScale: 1.28, bodyWidth: 1.38, bodyDepth: 1.2,
+    skin: 0x76504a, skinDark: 0x503532, knockback: 0.58, gait: 0.8,
+  },
+  bloated: {
+    maxHealth: 115, speed: 0.82, injuredSpeed: 1.02, damage: 8,
+    attackRange: 1.2, attackStartRange: 0.9, windup: 0.42,
+    cooldown: [1.65, 2.2], visualScale: 1.12, bodyWidth: 1.35, bodyDepth: 1.2,
+    skin: 0x84906b, skinDark: 0x566044, knockback: 0.72, gait: 0.88,
+  },
+};
+
 export class GoreNPC {
   constructor(scene, fx, audio, x, z, opts = {}) {
     this.scene = scene;
     this.fx = fx;
     this.audio = audio;
-    this.maxHealth = 72;
+    this.variant = Object.prototype.hasOwnProperty.call(VARIANTS, opts.variant) ? opts.variant : 'shambler';
+    this.stats = VARIANTS[this.variant];
+    this.maxHealth = this.stats.maxHealth;
     this.health = this.maxHealth;
     this.state = 'chase';
-    this.attackCooldown = rand(0.9, 1.7);
+    this.attackCooldown = rand(...this.stats.cooldown);
     this.attackWindup = 0;
     this.staggerT = 0;
     this.deathT = 0;
@@ -26,7 +55,10 @@ export class GoreNPC {
     this.hitCount = 0;
     this.throwT = 0;
     this.grabT = 0;
-    this.baseScale = opts.scale || 1;
+    this.baseScale = opts.scale ?? 1;
+    this.visualScale = this.stats.visualScale;
+    this.bounds = Number.isFinite(opts.bounds) ? Math.max(0, opts.bounds) : 1.66;
+    this.attackWindupDuration = this.stats.windup;
 
     this.group = new THREE.Group();
     this.group.position.set(x, 0, z);
@@ -47,8 +79,9 @@ export class GoreNPC {
       return m;
     };
     this.materials = [];
-    const skin = M(0xa9665a);
-    const skinDark = M(0x7c443d);
+    this.root.scale.setScalar(this.visualScale);
+    const skin = M(this.stats.skin);
+    const skinDark = M(this.stats.skinDark);
     const shorts = M(0x24201f, { roughness: 0.9 });
     const bone = M(0xd8ccb0, { roughness: 0.55 });
     const blood = M(0x4d0b0e, { roughness: 0.4 });
@@ -68,8 +101,13 @@ export class GoreNPC {
     // torso + hips
     const hips = add(this.root, new THREE.BoxGeometry(0.3, 0.2, 0.22), shorts, 0, 0.72, 0);
     hips.geometry.translate(0, 0, 0);
+    hips.scale.set(this.stats.bodyWidth, 1, this.stats.bodyDepth);
     const torso = add(this.root, new THREE.CapsuleGeometry(0.185, 0.34, 2, 5), skin, 0, 1.04, 0);
-    torso.scale.set(1.1, 1, 0.72);
+    torso.scale.set(1.1 * this.stats.bodyWidth, 1, 0.72 * this.stats.bodyDepth);
+    if (this.variant === 'bloated') {
+      const belly = add(this.root, new THREE.SphereGeometry(0.19, 8, 6), skin, 0, 0.94, 0.105);
+      belly.scale.set(1.45, 1.05, 0.8);
+    }
 
     // exposed rib cage (gore)
     const wound = add(this.root, new THREE.SphereGeometry(0.13, 7, 5), bloodBright, 0, 1.08, 0.135);
@@ -217,7 +255,7 @@ export class GoreNPC {
     const distToPlayer = Math.hypot(this.group.position.x - player.group.position.x, this.group.position.z - player.group.position.z);
     this.bar.visible = alive && (this.health < this.maxHealth || distToPlayer < 3.2) && this.state !== 'grabbed';
     if (this.bar.visible) {
-      this.bar.position.set(this.group.position.x, this.group.position.y + 1.86 * this.baseScale, this.group.position.z);
+      this.bar.position.set(this.group.position.x, this.group.position.y + 1.86 * this.baseScale * this.visualScale, this.group.position.z);
       this.bar.quaternion.copy(game.camera.quaternion);
       const ratio = clamp(this.health / this.maxHealth, 0, 1);
       this.barFill.scale.x = Math.max(0.001, ratio);
@@ -272,16 +310,16 @@ export class GoreNPC {
     if (this.attackWindup > 0) {
       this.attackWindup -= dt;
       this.root.rotation.x = -0.12;
-      const t = 1 - clamp(this.attackWindup / 0.34, 0, 1);
+      const t = 1 - clamp(this.attackWindup / this.attackWindupDuration, 0, 1);
       this.armR.rotation.x = lerp(-0.2, -2.5, Math.min(1, t * 1.6));
       this.armR.rotation.z = lerp(0, 0.35, t);
       this.armL.rotation.x = lerp(0, 0.5, t);
       if (this.attackWindup <= 0) {
         this.armR.rotation.x = 0.55;
         this.armR.rotation.z = -0.1;
-        this.attackCooldown = rand(1.45, 2.0);
-        if (dist < 1.05 && player.alive) {
-          player.takeDamage(6, this);
+        this.attackCooldown = rand(...this.stats.cooldown);
+        if (dist < this.stats.attackRange && player.alive) {
+          player.takeDamage(this.stats.damage, this);
           game.onPlayerHurt(this);
           this.fx.bloodBurst(player.group.position.clone().setY(1.05), new THREE.Vector3(nx, 0.2, nz), 8, 0.8);
         }
@@ -297,8 +335,8 @@ export class GoreNPC {
       return;
     }
 
-    if (dist > 0.78) {
-      const speed = (this.health < this.maxHealth * 0.4 ? 1.42 : 1.02);
+    if (dist > this.stats.attackStartRange) {
+      const speed = this.health < this.maxHealth * 0.4 ? this.stats.injuredSpeed : this.stats.speed;
       let sx = nx * speed;
       let sz = nz * speed;
 
@@ -320,7 +358,8 @@ export class GoreNPC {
     } else {
       this.animateWalk(dt, 0.25);
       if (this.attackCooldown <= 0) {
-        this.attackWindup = 0.34;
+        this.attackWindup = this.stats.windup;
+        this.attackWindupDuration = this.stats.windup;
         this.audio.swing();
       }
     }
@@ -376,7 +415,7 @@ export class GoreNPC {
   }
 
   animateWalk(dt, amount) {
-    if (amount > 0) this.walkPhase += dt * (6 + amount * 5);
+    if (amount > 0) this.walkPhase += dt * (6 + amount * 5) * this.stats.gait;
     const swing = Math.sin(this.walkPhase) * 0.55 * amount;
     const swing2 = Math.sin(this.walkPhase + Math.PI) * 0.55 * amount;
     if (this.attackWindup <= 0) {
@@ -423,7 +462,7 @@ export class GoreNPC {
   }
 
   clampArena(thrown = false) {
-    const lim = 1.66;
+    const lim = this.bounds;
     const p = this.group.position;
     if (p.x > lim) { p.x = lim; if (thrown) this.vel.x *= -0.4; }
     if (p.x < -lim) { p.x = -lim; if (thrown) this.vel.x *= -0.4; }
@@ -450,7 +489,8 @@ export class GoreNPC {
     if (this.state !== 'grabbed') {
       this.state = 'stagger';
       this.staggerT = 0.16 + amount * 0.004;
-      this.vel.set(dir.x * (opts.knockback ?? 2.2), 0, dir.z * (opts.knockback ?? 2.2));
+      const knockback = (opts.knockback ?? 2.2) * this.stats.knockback;
+      this.vel.set(dir.x * knockback, 0, dir.z * knockback);
       this.root.rotation.x = 0.2;
       this.attackWindup = 0;
     }

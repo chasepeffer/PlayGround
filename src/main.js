@@ -4,6 +4,7 @@ import { Sound } from './audio.js';
 import { GoreNPC } from './npc.js';
 import { WeaponDrop, WEAPON_DEFS, WEAPON_ICONS, buildWeaponMesh } from './weapons.js';
 import { LOW, QUALITY, lit } from './quality.js';
+import { MAPS, buildMap } from './maps.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
@@ -33,30 +34,8 @@ keyLight.position.set(-3.5, 7, 4.5);
 keyLight.castShadow = QUALITY.shadows;
 scene.add(keyLight);
 
-const concrete = lit(0x555155);
-const wallMat = lit(0x39383d);
-const floor = new THREE.Mesh(new THREE.BoxGeometry(4, 0.16, 4), concrete);
-floor.position.y = -0.08;
-floor.receiveShadow = false;
-scene.add(floor);
-// Exactly two plain, untextured boundary walls; the other edges are open.
-const wallBack = new THREE.Mesh(new THREE.BoxGeometry(4, 2.8, 0.16), wallMat);
-wallBack.position.set(0, 1.32, -2.08);
-wallBack.receiveShadow = false;
-wallBack.castShadow = false;
-scene.add(wallBack);
-const wallLeft = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.8, 4), wallMat);
-wallLeft.position.set(-2.08, 1.32, 0);
-wallLeft.receiveShadow = false;
-wallLeft.castShadow = false;
-scene.add(wallLeft);
-// Bare arena slab with restrained edge markings (geometry, not textures).
-const edgeMat = new THREE.MeshBasicMaterial({ color: 0x8e3231, transparent: true, opacity: 0.65 });
-for (const [x, z, sx, sz] of [[0, 1.94, 3.85, 0.018], [1.94, 0, 0.018, 3.85]]) {
-  const line = new THREE.Mesh(new THREE.BoxGeometry(sx, 0.008, sz), edgeMat);
-  line.position.set(x, 0.006, z);
-  scene.add(line);
-}
+let currentMap = buildMap(scene, 'four');
+let mapBounds = currentMap.bounds;
 
 const fx = new FX(scene);
 const audio = new Sound();
@@ -69,7 +48,7 @@ const player = {
     if (this.health <= 0) this.alive = false;
   }
 };
-player.group.position.set(0, 0, 0.65);
+player.group.position.set(currentMap.spawn[0], 0, currentMap.spawn[1]);
 scene.add(player.group);
 camera.position.set(0, 1.62, 0);
 player.group.add(camera);
@@ -99,14 +78,29 @@ let viewWeapon = null;
 let swingT = 0;
 
 const npcs = [];
-const weapons = [
-  new WeaponDrop('pickaxe', scene, fx, 1.28, -0.9),
-  new WeaponDrop('hatchet', scene, fx, -0.7, 1.32)
-];
+let weapons = [];
 let heldNPC = null;
 let heldWeapon = null;
+let heldGun = null;
+let gunAmmo = 0;
+const ammoByGun = { pistol: 12, shotgun: 6, smg: 30 };
+let gunCooldown = 0;
+let reloading = 0;
+let money = 0;
+let wave = 0;
+let waveDelay = 0;
+let waveSpawnTimer = 0;
+let waveRemaining = 0;
+let selectedMapId = 'four';
+let shopOpen = false;
+let ownedGuns = new Set();
 let kills = 0;
 let time = 0;
+const GUNS = {
+  pistol: { name: 'PISTOL', damage: 38, cooldown: 0.34, ammo: 12, range: 28, cost: 0, color: 0xb9c2c7 },
+  shotgun: { name: 'SHOTGUN', damage: 78, cooldown: 0.82, ammo: 6, range: 12, cost: 180, color: 0x8c5433 },
+  smg: { name: 'SMG', damage: 24, cooldown: 0.11, ammo: 30, range: 22, cost: 280, color: 0x535b61 }
+};
 let shakeT = 0;
 let hitCooldown = 0;
 let inputLocked = false;
@@ -130,9 +124,11 @@ const game = {
     if (npc.health < before) {
       showHit();
       this.shake(damage > 24 ? 0.16 : 0.08);
-      if (npc.state === 'dead') {
+      if (npc.state === 'dead' && !npc.rewarded) {
+        npc.rewarded = true;
         kills++;
-        addFeed(`${opts.weapon ? WEAPON_DEFS[opts.weapon].name : 'PUNCH'} · GORE DOWN`);
+        if (currentMap.id === 'church') money += 35;
+        addFeed(`${opts.weapon ? (WEAPON_DEFS[opts.weapon]?.name || GUNS[opts.weapon]?.name || opts.weapon.toUpperCase()) : 'PUNCH'} · GORE DOWN`);
       }
     }
   }
@@ -152,15 +148,36 @@ function addFeed(text) {
   while (feed.children.length > 3) feed.lastElementChild.remove();
 }
 function setWeapon(kind) {
-  const def = WEAPON_DEFS[kind];
+  const gun = GUNS[kind];
+  const def = gun || WEAPON_DEFS[kind];
   $('weapon-name').textContent = def.name;
   $('weapon-dmg').textContent = `${def.damage} DMG`;
-  $('weapon-spd').textContent = def.speed;
-  $('weapon-icon').innerHTML = WEAPON_ICONS[kind];
-  $('weapon-bar-fill').style.width = `${Math.min(100, 25 + def.damage * 1.9)}%`;
+  $('weapon-spd').textContent = gun ? `${gunAmmo}/${gun.ammo}` : def.speed;
+  $('weapon-icon').innerHTML = gun ? '<span class="gun-icon">▰</span>' : WEAPON_ICONS[kind];
+  $('weapon-bar-fill').style.width = `${gun ? (gunAmmo / gun.ammo) * 100 : Math.min(100, 25 + def.damage * 1.9)}%`;
+  $('weapon-card').classList.toggle('gun-card', !!gun);
+}
+function buildGunMesh(kind) {
+  const g = new THREE.Group();
+  const metal = lit(GUNS[kind].color, { metalness: 0.65, roughness: 0.38 });
+  const grip = lit(0x211d1a);
+  const barrel = new THREE.Mesh(new THREE.BoxGeometry(kind === 'shotgun' ? .09 : .075, .09, kind === 'shotgun' ? .52 : .34), metal);
+  barrel.position.z = -.13; g.add(barrel);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(.15, .12, .23), metal); body.position.set(0, -.05, .02); g.add(body);
+  const handle = new THREE.Mesh(new THREE.BoxGeometry(.105, .2, .12), grip); handle.position.set(0, -.18, .08); handle.rotation.x = -.2; g.add(handle);
+  g.traverse(o => { if (o.isMesh) o.frustumCulled = false; });
+  return g;
 }
 function syncViewWeapon() {
   if (viewWeapon) { hands.remove(viewWeapon); viewWeapon = null; }
+  if (heldGun) {
+    viewWeapon = buildGunMesh(heldGun);
+    viewWeapon.scale.setScalar(.85);
+    viewWeapon.position.set(.27, -.29, -.48);
+    viewWeapon.rotation.set(-.12, 0, -.04);
+    hands.add(viewWeapon);
+    return;
+  }
   if (!heldWeapon) return;
   viewWeapon = buildWeaponMesh(heldWeapon.kind);
   viewWeapon.scale.setScalar(0.72);
@@ -170,6 +187,7 @@ function syncViewWeapon() {
   hands.add(viewWeapon);
 }
 function useWeapon(kind) {
+  heldGun = null;
   audio.pickup();
   if (heldWeapon) {
     heldWeapon.dropToGround(player.group.position.clone().add(new THREE.Vector3(0.35, 0, 0.2)), yaw);
@@ -181,15 +199,17 @@ function useWeapon(kind) {
   setWeapon(kind.kind);
   $('state-label').textContent = 'ARMED';
 }
-function spawnNPC() {
+function spawnNPC(force = false) {
   if (!player.alive || npcs.filter(n => n.alive).length >= QUALITY.maxNPCs) return;
   const angle = Math.random() * Math.PI * 2;
-  const radius = 1.35 + Math.random() * 0.25;
-  const x = THREE.MathUtils.clamp(player.group.position.x + Math.cos(angle) * radius, -1.55, 1.55);
-  const z = THREE.MathUtils.clamp(player.group.position.z + Math.sin(angle) * radius, -1.55, 1.55);
-  npcs.push(new GoreNPC(scene, fx, audio, x, z, { scale: 0.92 + Math.random() * 0.16 }));
+  const radius = Math.max(1.35, currentMap.bounds * .68) + Math.random() * .45;
+  const x = THREE.MathUtils.clamp(player.group.position.x + Math.cos(angle) * radius, -currentMap.bounds + .55, currentMap.bounds - .55);
+  const z = THREE.MathUtils.clamp(player.group.position.z + Math.sin(angle) * radius, -currentMap.bounds + .55, currentMap.bounds - .55);
+  const variants = ['shambler', 'runner', 'brute', 'bloated'];
+  const variant = variants[Math.floor(Math.random() * variants.length)];
+  npcs.push(new GoreNPC(scene, fx, audio, x, z, { scale: 0.92 + Math.random() * 0.16, variant }));
   audio.spawn();
-  addFeed('GORE NPC · SPAWNED');
+  if (!force) addFeed(`${variant.toUpperCase()} · SPAWNED`);
 }
 
 function nearestTarget(maxDist = 1.65) {
